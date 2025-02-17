@@ -1,11 +1,11 @@
 import typer
 from commands.show import show
-from commands.list import list
+from src.commands.details import details
 
 app = typer.Typer()
 
 app.command()(show)
-app.command()(list)
+app.command()(details)
 
 if __name__ == "__main__":
   app()

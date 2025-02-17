@@ -1,4 +1,4 @@
 from .commands.show import show
-from .commands.list import list
+from .commands.details import details
 
-__all__ = ['show', 'list']
+__all__ = ['show', 'details']

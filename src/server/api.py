@@ -1,34 +1,44 @@
-import requests
-from .config import BASE_URL
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 
-def fetch_problem_list():
-  """Fetches a list of LeetCode problems from the API."""
-  query = {
-    "query": """
-    query {
-      problemsetQuestionListV2(
-        categorySlug: ""
-        limit: 10
-        skip: 0
-      ) {
-        questions {
-          questionFrontendId
-          title
-          difficulty
-          topicTags {
-            name
-          }
-        }
-      }
-    }
-    """
-  }
+transport = RequestsHTTPTransport(
+	url='https://leetcode.com/graphql',
+	headers={'Content-Type': 'application/json'},
+)
 
-  response = requests.post(BASE_URL, json=query)
-  data = response.json()
+client = Client(
+  transport=transport,
+  fetch_schema_from_transport=False
+)
 
-  if "errors" in data:
-    print("Error fetching problems:", data["errors"])
-    return []
+def fetch_problem_list(username: str = "yuvrajsinh5252"):
+	variables = {"username": username}
+	query = gql(
+		"""
+		query userProblemsSolved($username: String!) {
+			allQuestionsCount {
+				difficulty
+				count
+			}
+			matchedUser(username: $username) {
+				problemsSolvedBeatsStats {
+					difficulty
+					percentage
+				}
+				submitStatsGlobal {
+					acSubmissionNum {
+						difficulty
+						count
+					}
+				}
+			}
+		}
+		"""
+	)
 
-  return data["data"]["problemsetQuestionList"]["questions"]
+	try:
+		result = client.execute(query, variable_values=variables)
+		return result
+	except Exception as e:
+		print(f"Error fetching data: {str(e)}")
+		return None

@@ -1,4 +1,6 @@
 typer
 requests
 gql[all]
+bs4
 setuptools
+python-leetcode

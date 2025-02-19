@@ -34,12 +34,10 @@ def create_user_stats_table(data):
   return table
 
 def display_problem_stats(data):
-  """Display problem statistics in a formatted way."""
+    problems_table = create_problems_table(data)
+    console.print(problems_table)
 
-  problems_table = create_problems_table(data)
-  console.print(problems_table)
-
-  user_stats = create_user_stats_table(data)
-  if user_stats:
-    console.print("\n")
-    console.print(user_stats)
+    user_stats = create_user_stats_table(data)
+    if user_stats:
+        console.print("\n")
+        console.print(user_stats)

@@ -6,10 +6,17 @@ from src.server.solution_manager import SolutionManager
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
 
+map_lang = {
+    "py": "python3",
+    "java": "java",
+    "js": "javascript",
+    "c": "c",
+    "cpp": "cpp"
+}
+
 def test(
     problem: str = typer.Argument(..., help="Problem slug (e.g., 'two-sum')"),
     file: Path = typer.Argument(..., help="Path to solution file"),
-    lang: str = typer.Option("python3", help="Programming language")
 ):
     """Test a solution with LeetCode's test cases"""
     if not auth_manager.is_authenticated:
@@ -22,6 +29,11 @@ def test(
 
     with open(file, 'r') as f:
         code = f.read()
+
+    lang = map_lang.get(file.suffix[1:])
+    if not lang:
+        typer.echo(typer.style(f"❌ Unsupported file extension: {file.suffix}", fg=typer.colors.RED))
+        raise typer.Exit(1)
 
     typer.echo(typer.style("🧪 Testing solution with LeetCode test cases...", fg=typer.colors.YELLOW))
     result = solution_manager.test_solution(problem, code, lang)

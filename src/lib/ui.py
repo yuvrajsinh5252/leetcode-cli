@@ -1,43 +1,104 @@
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
+from rich import box
+from datetime import datetime
 
 console = Console()
 
-def create_problems_table(data):
-  table = Table(title="LeetCode Problems Count")
-  table.add_column("Difficulty", style="cyan")
-  table.add_column("Count", justify="right", style="green")
+def format_timestamp(timestamp):
+    dt = datetime.fromtimestamp(timestamp)
+    return dt.strftime("%Y-%m-%d %H:%M")
 
-  for item in data['allQuestionsCount']:
-    table.add_row(item['difficulty'], str(item['count']))
-  return table
+def create_recent_activity(recent_submissions):
+    if not recent_submissions:
+        return None
 
-def create_user_stats_table(data):
-  if not data.get('matchedUser'):
-    return None
+    table = Table(
+        title="Recent Submissions",
+        box=box.ROUNDED,
+        border_style="cyan",
+        pad_edge=False,
+        show_edge=True
+    )
 
-  table = Table(title="Your Statistics")
-  table.add_column("Difficulty", style="cyan")
-  table.add_column("Solved", justify="right", style="green")
-  table.add_column("Beats", justify="right", style="yellow")
+    table.add_column("Time", style="dim", width=16)
+    table.add_column("Problem", style="cyan")
+    table.add_column("Status", justify="center", width=8)
 
-  user_data = data['matchedUser']
-  solved = user_data['submitStatsGlobal']['acSubmissionNum']
-  beats = user_data['problemsSolvedBeatsStats']
+    for sub in recent_submissions[:5]:  # Show last 5 submissions
+        status_icon = "[green]✓" if sub['statusDisplay'] == "Accepted" else "[red]✗"
+        table.add_row(
+            format_timestamp(sub['timestamp']),
+            sub['title'],
+            status_icon
+        )
 
-  difficulties = ['Easy', 'Medium', 'Hard']
-  for diff in difficulties:
-    solved_count = next((item['count'] for item in solved if item['difficulty'] == diff), 0)
-    beats_percent = next((f"{item['percentage']:.1f}%" for item in beats if item['difficulty'] == diff), "N/A")
-    table.add_row(diff, str(solved_count), beats_percent)
+    return table
 
-  return table
+def create_profile_header(data):
+    username = data.get('matchedUser', {}).get('username', 'Leetcoder')
+    user_data = data.get('matchedUser', {})
+    solved = user_data.get('submitStatsGlobal', {}).get('acSubmissionNum', [])
+
+    table = Table.grid(padding=(0, 2))
+    table.add_column(justify="left", width=130)
+    table.add_column(justify="left", width=45)
+
+    # Calculate stats
+    total_solved = next((item['count'] for item in solved if item['difficulty'] == 'All'), 0)
+    total_problems = next((item['count'] for item in data['allQuestionsCount'] if item['difficulty'] == 'All'), 0)
+    solve_percentage = (total_solved / total_problems) * 100 if total_problems > 0 else 0
+
+    # Left column - compact formatting
+    profile_text = (
+        f"[bold cyan]{username}[/bold cyan]\n"
+        f"Solved: [cyan]{total_solved}[/cyan]/[cyan]{total_problems}[/cyan]\n"
+        f"[dim]({solve_percentage:.1f}%)[/dim]"
+    )
+
+    # Right column - clean difficulty stats
+    difficulties = ['Easy', 'Medium', 'Hard']
+    colors = ['green', 'yellow', 'red']
+    stats_text = []
+
+    for diff, color in zip(difficulties, colors):
+        solved_count = next((item['count'] for item in solved if item['difficulty'] == diff), 0)
+        total_count = next((item['count'] for item in data['allQuestionsCount'] if item['difficulty'] == diff), 0)
+        percentage = (solved_count / total_count) * 100 if total_count > 0 else 0
+
+        dots = "●" * int(percentage/10) + "○" * (10 - int(percentage/10))
+        stats_text.append(
+            f"[{color}]{diff:<6} {solved_count:>3}/{total_count:<4} {dots} {percentage:>5.1f}%[/{color}]"
+        )
+
+    table.add_row(
+        profile_text,
+        "\n".join(stats_text)
+    )
+
+    return Panel(
+        table,
+        border_style="cyan",
+        padding=(1, 2),
+        title="[bold cyan]LeetCode Profile[/bold cyan]"
+    )
 
 def display_problem_stats(data):
-    problems_table = create_problems_table(data)
-    console.print(problems_table)
+    console.clear()
+    console.print("\n")
 
-    user_stats = create_user_stats_table(data)
-    if user_stats:
-        console.print("\n")
-        console.print(user_stats)
+    # Display profile header
+    console.print(create_profile_header(data))
+    console.print("\n")
+
+    # Display recent submissions
+    recent_submissions = data.get('matchedUser', {}).get('recentSubmissionList', [])
+    if recent_submissions:
+        recent_activity = create_recent_activity(recent_submissions)
+        if recent_activity:
+            console.print(recent_activity)
+    else:
+        console.print(Panel("No recent activity", border_style="cyan"))
+
+    console.print("\n")

@@ -15,10 +15,7 @@ class SolutionManager:
         if not hasattr(self.session, 'cookies'):
             return
 
-        # Get all cookies
         all_cookies = list(self.session.cookies)
-
-        # Clear all cookies
         self.session.cookies.clear()
 
         # Add back only the most recent cookie for each name
@@ -32,7 +29,7 @@ class SolutionManager:
         for cookie in self.session.cookies:
             if cookie.name == 'csrftoken':
                 return cookie.value
-        return "iIf1V3zVGiU5F0neqw63pFm0YlFtk9i531xUBoQe0hZ06pmDGPZ0uJW6vyhr8GEH"
+        return ''
 
     def get_question_data(self, question_identifier: str) -> Dict[str, Any]:
         """Get question details using GraphQL
@@ -83,28 +80,58 @@ class SolutionManager:
 
     def submit_solution(self, title_slug: str, code: str, lang: str = "python3") -> Dict[str, Any]:
         """Submit a solution to LeetCode"""
+        try:
+            self._clean_session_cookies()
 
-        # First get the question ID
-        question_data = self.get_question_data(title_slug)
-        question_id = question_data['data']['question']['questionId']
+            # Get question ID
+            question_data = self.get_question_data(title_slug)
+            question_data = question_data.get('data', {}).get('question')
+            if not question_data:
+                return {"success": False, "error": "Question data not found"}
 
-        submit_url = f"{self.BASE_URL}/problems/{title_slug}/submit/"
+            question_id = question_data['questionId']
+            submit_url = f"{self.BASE_URL}/problems/{title_slug}/submit/"
 
-        data = {
-            "lang": lang,
-            "question_id": question_id,
-            "typed_code": code
-        }
+            csrf_token = self._get_csrf_token()
+            typer.echo(f"Using CSRF token: {csrf_token}")
 
-        response = self.session.post(submit_url, json=data)
-        if response.status_code != 200:
-            return {"success": False, "error": f"Submission failed: {response.status_code}"}
+            headers = {
+                'referer': f"{self.BASE_URL}/problems/{title_slug}/",
+                'content-type': 'application/json',
+                'x-csrftoken': csrf_token,
+                'x-requested-with': 'XMLHttpRequest',
+                'origin': self.BASE_URL
+            }
 
-        submission_id = response.json().get('submission_id')
-        if not submission_id:
-            return {"success": False, "error": "No submission ID received"}
+            data = {
+                "lang": lang,
+                "question_id": question_id,
+                "typed_code": code
+            }
 
-        return self.get_submission_result(submission_id)
+            typer.echo(f"Sending request to {submit_url}")
+            response = self.session.post(submit_url, json=data, headers=headers)
+
+            if response.status_code != 200:
+                typer.echo(f"Error response: {response.text}", err=True)
+                return {"success": False, "error": f"Submission failed with status {response.status_code}"}
+
+            try:
+                result_data = response.json()
+                submission_id = result_data.get('submission_id')
+                if submission_id:
+                    typer.echo(f"Got submission ID: {submission_id}")
+                    return self.get_submission_result(submission_id)
+                else:
+                    typer.echo("No submission ID in response", err=True)
+                    return {"success": False, "error": "No submission ID received"}
+            except ValueError as e:
+                typer.echo(f"Failed to parse response: {response.text}", err=True)
+                return {"success": False, "error": f"Failed to parse response: {str(e)}"}
+
+        except Exception as e:
+            typer.echo(f"Submission error: {str(e)}", err=True)
+            return {"success": False, "error": f"Submission error: {str(e)}"}
 
     def test_solution(self, title_slug: str, code: str, lang: str = "python3", full: bool = False) -> Dict[str, Any]:
         """Test a solution with LeetCode test cases"""
@@ -157,7 +184,7 @@ class SolutionManager:
                 submission_id = result_data.get(sid_key)
                 if submission_id:
                     typer.echo(f"Got submission ID: {submission_id}")
-                    return self.get_result(submission_id)
+                    return self.get_test_result(submission_id)
                 else:
                     typer.echo("No submission ID in response", err=True)
                     return {"success": False, "error": "No submission ID received"}
@@ -177,7 +204,7 @@ class SolutionManager:
             return output.strip('[]"')
         return str(output)
 
-    def get_result(self, submission_id: str, timeout: int = 30) -> Dict[str, Any]:
+    def get_test_result(self, submission_id: str, timeout: int = 30) -> Dict[str, Any]:
         """Poll for results with timeout"""
         url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
         typer.echo(f"Polling for results at {url}")
@@ -216,7 +243,7 @@ class SolutionManager:
         """Poll for submission results"""
         check_url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
 
-        for _ in range(20):  # Try for 20 seconds
+        for _ in range(20):  #
             response = self.session.get(check_url)
             if response.status_code != 200:
                 return {"success": False, "error": f"Failed to get results: {response.status_code}"}
@@ -235,49 +262,3 @@ class SolutionManager:
             time.sleep(1)
 
         return {"success": False, "error": "Timeout waiting for results"}
-
-    def get_test_result(self, interpret_id: str) -> Dict[str, Any]:
-        """Poll for test results"""
-        check_url = f"{self.BASE_URL}/submissions/detail/{interpret_id}/check/"
-
-        headers = {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-
-        max_attempts = 10
-        for attempt in range(max_attempts):
-            try:
-                response = self.session.get(check_url, headers=headers)
-                if response.status_code != 200:
-                    return {"success": False, "error": f"Failed to get results: {response.status_code}"}
-
-                result = response.json()
-
-                # Check for compilation errors first
-                if result.get('status_msg') == 'Compile Error':
-                    return {
-                        "success": False,
-                        "error": f"Compilation Error:\n{result.get('compile_error', 'Unknown compilation error')}"
-                    }
-
-                if result.get('state') == 'SUCCESS':
-                    status_msg = result.get('status_msg', 'Unknown')
-                    return {
-                        "success": True,
-                        "status": status_msg,
-                        "input": result.get('input', 'N/A'),
-                        "output": result.get('code_output', 'N/A').strip('[]"'),
-                        "expected": result.get('expected_output', 'N/A').strip('[]"'),
-                        "runtime": result.get('status_runtime', 'N/A'),
-                        "memory": result.get('memory', 'N/A'),
-                    }
-
-                # If not success yet, wait before next attempt
-                if attempt < max_attempts - 1:
-                    time.sleep(2)
-
-            except Exception as e:
-                return {"success": False, "error": f"Error checking results: {str(e)}"}
-
-        return {"success": False, "error": "Timeout waiting for test results"}

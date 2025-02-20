@@ -14,9 +14,10 @@ class SessionManager:
         """Ensure the config directory exists"""
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
-    def save_session(self, session_token: str, user_name: str):
+    def save_session(self, csrftoken: str, session_token: str, user_name: str):
         """Save the session token and username to file"""
         data = {
+            'csrftoken': csrftoken,
             'session_token': session_token,
             'user_name': user_name
         }

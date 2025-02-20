@@ -1,19 +1,27 @@
-import requests
 from typing import Dict, Any
-import json
 import time
-from bs4 import BeautifulSoup
-import html
-
-import typer
 
 class SolutionManager:
     def __init__(self, session):
         self.session = session
         self.BASE_URL = "https://leetcode.com"
 
-    def get_question_data(self, title_slug: str) -> Dict[str, Any]:
-        """Get question details using GraphQL"""
+    def get_question_data(self, question_identifier: str) -> Dict[str, Any]:
+        """Get question details using GraphQL
+        Args:
+            question_identifier: Can be either title slug (e.g. 'two-sum') or question number (e.g. '1')
+        """
+        if question_identifier.isdigit():
+            response = self.session.get(f"{self.BASE_URL}/api/problems/all/")
+            if response.status_code == 200:
+                problems = response.json().get('stat_status_pairs', [])
+                for problem in problems:
+                    if str(problem['stat']['frontend_question_id']) == question_identifier:
+                        question_identifier = problem['stat']['question__title_slug']
+                        break
+                else:
+                    return {"error": f"Question number {question_identifier} not found"}
+
         query = """
             query questionData($titleSlug: String!) {
                 question(titleSlug: $titleSlug) {
@@ -24,6 +32,7 @@ class SolutionManager:
                     difficulty
                     exampleTestcaseList
                     sampleTestCase
+                    stats
                     metaData
                     codeSnippets {
                         lang
@@ -38,37 +47,11 @@ class SolutionManager:
             f"{self.BASE_URL}/graphql",
             json={
                 "query": query,
-                "variables": {"titleSlug": title_slug}
+                "variables": {"titleSlug": question_identifier}
             }
         )
 
         return response.json()
-
-    def format_problem_details(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Format problem details for display"""
-        question = data['data']['question']
-
-        # Parse HTML content
-        soup = BeautifulSoup(question['content'], 'html.parser')
-        content = soup.get_text('\n').strip()
-
-        # Parse metadata
-        metadata = json.loads(question.get('metaData', '{}'))
-
-        # Get example test cases
-        example_tests = question.get('exampleTestcases', '').split('\n')
-        example_tests = [test for test in example_tests if test]
-
-        return {
-            'id': question['questionId'],
-            'title': question['title'],
-            'difficulty': question['difficulty'],
-            'content': content,
-            'example_tests': example_tests,
-            'params': metadata.get('params', []),
-            'return_type': metadata.get('return', {}).get('type', 'Unknown'),
-            'code_snippets': question['codeSnippets']
-        }
 
     def submit_solution(self, title_slug: str, code: str, lang: str = "python3") -> Dict[str, Any]:
         """Submit a solution to LeetCode"""

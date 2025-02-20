@@ -19,5 +19,4 @@ def show(problem: str = typer.Argument(..., help="Problem slug (e.g., 'two-sum')
         typer.echo(typer.style(f"❌ Problem '{problem}' not found", fg=typer.colors.RED))
         raise typer.Exit(1)
 
-
     ProblemDetails(data.get('data', {}).get('question')).display()

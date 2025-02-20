@@ -1,14 +1,18 @@
 from rich.console import Console
+from rich.table import Table
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.layout import Layout
 from rich.box import ROUNDED
+from rich.style import Style
 from rich.text import Text
 from rich.align import Align
 from bs4 import BeautifulSoup
 import json
 from dataclasses import dataclass
 from typing import List, Dict, Optional
+
+import typer
 
 console = Console()
 
@@ -20,11 +24,16 @@ class FunctionMetadata:
 
 class ProblemDetails:
     def __init__(self, problem_data: dict):
+        self.data = problem_data
         self.question_id: int = problem_data['questionId']
         self.title: str = problem_data['title']
         self.difficulty: str = problem_data['difficulty']
         self.content: str = problem_data['content']
-        self.test_cases: List[str] = problem_data['exampleTestcases'].split('\n')
+        self.test_cases: List[str] = (
+            problem_data['exampleTestcaseList']
+            if isinstance(problem_data['exampleTestcaseList'], list)
+            else problem_data.get('exampleTestcases', '').split('\n')
+        )
         self.code_snippets: List[Dict] = problem_data['codeSnippets']
 
         # Parse metadata
@@ -120,7 +129,8 @@ class ProblemDetails:
             f"[bold green]Out:[/] {expected_str}"
         )
 
-    def create_header(self):
+    def _create_header(self):
+        """Create the problem header with title and difficulty"""
         difficulty_colors = {
             'Easy': 'bright_green',
             'Medium': 'yellow',
@@ -129,74 +139,101 @@ class ProblemDetails:
         difficulty_color = difficulty_colors.get(self.difficulty, 'white')
 
         header = Text()
-        header.append("🔹 ", style="blue")
         header.append(f"{self.question_id}. {self.title}", style="bold cyan")
-        header.append(" • ", style="dim")
+        header.append("  ", style="dim")
         header.append(self.difficulty, style=difficulty_color)
 
         return Align.center(header)
 
-    def display(self):
-        console.clear()
+    def _format_description(self, html_content: str) -> str:
+        """Format the problem description, removing example test cases"""
+        soup = BeautifulSoup(html_content, 'html.parser')
+        typer.echo(soup.prettify())
 
-        console.print(self.create_header())
+        # Remove all pre tags and example sections
+        for pre in soup.find_all('pre'):
+            pre.decompose()
+        for strong in soup.find_all('strong', class_='example'):
+            strong.decompose()
+        for tag in soup.find_all():
+            if not tag.get_text(strip=True):
+                tag.decompose()
+
+        # Format remaining HTML elements
+        for code in soup.find_all('code'):
+            code.replace_with(BeautifulSoup(f'`{code.text}`', 'html.parser'))
+
+        # Format strong and em tags
+        for strong in soup.find_all('strong'):
+            strong.replace_with(BeautifulSoup(f'**{strong.text}**', 'html.parser'))
+
+        for em in soup.find_all('em'):
+            em.replace_with(BeautifulSoup(f'_{em.text}_', 'html.parser'))
+
+        for pre in soup.find_all('pre'):
+            lines = pre.text.strip().split('\n')
+            formatted = '\n'.join(f'    {line}' for line in lines)
+            pre.replace_with(BeautifulSoup(f'\n```\n{formatted}\n```\n', 'html.parser'))
+
+        return soup.get_text('\n').strip()
+
+    def _format_test_cases(self):
+        """Format test cases with explanations"""
+        test_cases = []
+        examples = self.test_cases
+
+        # Extract example explanations from HTML content
+        soup = BeautifulSoup(self.content, 'html.parser')
+        explanations = []
+        for strong in soup.find_all('strong'):
+            if 'Example' in strong.text:
+                parent = strong.find_parent(['p', 'div'])
+                if parent:
+                    explanations.append(parent.get_text())
+
+        # Combine test cases with their explanations
+        for i, (test, explanation) in enumerate(zip(examples, explanations)):
+            test_cases.append(
+                f"[bold blue]Example {i + 1}:[/]\n"
+                f"[cyan]Input:[/] {test}\n"
+                f"{explanation.replace('Example ' + str(i + 1) + ':', '[yellow]Explanation:[/]')}"
+            )
+
+        return "\n\n".join(test_cases)
+
+    def display(self):
+        """Display the problem details"""
+        # Clear screen and show header
+        console.clear()
+        console.print(self._create_header())
         console.print()
 
+        # Create main layout
         layout = Layout()
         layout.split_row(
-            Layout(name="left_section"),
-            Layout(name="sidebar", size=self.console_width // 4)
+            Layout(name="description", ratio=2),
+            Layout(name="examples", ratio=1)
         )
 
-        layout["left_section"].split_column(
-            Layout(name="description", ratio=85),
-            Layout(name="bottom", ratio=15)
-        )
-
-        # Update description panel
+        # Description panel
+        description = self._format_description(self.content)
         layout["description"].update(Panel(
-            Markdown(self.formatted_description, justify="left", style="white"),
+            Markdown(description),
             box=ROUNDED,
             title="[bold blue]Description",
             border_style="blue",
-            padding=(1, 2),
-            expand=True
+            padding=(1, 2)
         ))
 
-        # Update sidebar panel
-        sidebar_content = (
-            f"{self.formatted_function_signature}\n\n"
-            "[bold blue]Available Languages:[/]\n"
-            f"[green]{self.available_languages}[/]"
-        )
-
-        layout["sidebar"].update(Panel(
-            sidebar_content,
+        # Example test cases panel
+        test_cases = self._format_test_cases()
+        layout["examples"].update(Panel(
+            test_cases,
             box=ROUNDED,
+            title="[bold blue]Examples",
             border_style="blue",
-            padding=(1, 2),
-            expand=True
+            padding=(1, 2)
         ))
 
-        # Update test cases panel
-        test_cases_content = []
-
-        for i in range(0, len(self.test_cases), 2):
-            if i + 1 < len(self.test_cases):
-                case_num = i // 2 + 1
-                test_case = self.format_test_case(
-                    self.test_cases[i],
-                    self.test_cases[i+1],
-                    case_num
-                )
-                test_cases_content.append(test_case)
-
-        layout["bottom"].update(Panel(
-            "\n\n".join(test_cases_content),
-            box=ROUNDED,
-            title="[bold blue]Sample Test Cases",
-            border_style="blue",
-            padding=(1, 2),
-        ))
-
+        # Display the layout
         console.print(layout)

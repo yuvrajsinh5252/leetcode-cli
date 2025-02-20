@@ -22,7 +22,7 @@ class SolutionManager:
                     titleSlug
                     content
                     difficulty
-                    exampleTestcases
+                    exampleTestcaseList
                     sampleTestCase
                     metaData
                     codeSnippets {
@@ -41,6 +41,7 @@ class SolutionManager:
                 "variables": {"titleSlug": title_slug}
             }
         )
+
         return response.json()
 
     def format_problem_details(self, data: Dict[str, Any]) -> Dict[str, Any]:

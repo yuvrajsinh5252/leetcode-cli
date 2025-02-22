@@ -1,6 +1,7 @@
 import profile
 import typer
 from src import show, profile
+from src.commands.edit import edit
 from src.commands.list_problems import list_problems
 from src.commands.login import login, logout
 from src.commands.submit import submit
@@ -15,6 +16,7 @@ app.command(name="login")(login)
 app.command(name="logout")(logout)
 app.command(name="submit")(submit)
 app.command(name="test")(test)
+app.command(name="edit")(edit)
 
 if __name__ == "__main__":
     app()

@@ -60,6 +60,9 @@ def fetch_problem_list(
     skip: int = 0,
     filters: dict = {}
 ):
+    if filters and 'difficulty' in filters:
+        filters['difficulty'] = filters['difficulty'].upper()
+
     client = create_leetcode_client(csrf_token, session_id)
     variables = {
         "categorySlug": categorySlug,

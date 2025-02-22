@@ -19,7 +19,7 @@ AuthManager = Auth()
 
 def list_problems(
   difficulty: Optional[str] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty (easy/medium/hard)"),
-  status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status (todo/in-progress/done)"),
+  status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status (todo/attempted/solved)"),
   tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tags (comma-separated)"),
   category_slug: Optional[str] = typer.Option("all-code-essentials", "--category-slug", "-c", help="Filter by category slug")
 ):

@@ -19,27 +19,102 @@ def create_recent_activity(recent_submissions):
         box=box.ROUNDED,
         border_style="cyan",
         pad_edge=False,
-        show_edge=True
+        show_edge=True,
+        width=65
     )
-
     table.add_column("Time", style="dim", width=16)
     table.add_column("Problem", style="cyan")
-    table.add_column("Status", justify="center", width=8)
 
     for sub in recent_submissions['recentAcSubmissionList'][:5]:
         table.add_row(
             format_timestamp(int(sub['timestamp'])),
             sub['title'],
-            "[green]✓"
         )
+    return table
+
+def create_progress_panel(data):
+    if not data.get('progress'):
+        return None
+
+    progress = data['progress']
+    all_count = progress['allQuestionsCount']
+    submit_stats = progress['matchedUser']['submitStats']
+    table = Table.grid(padding=(0, 1))
+    table.add_column(justify="left")
+
+    for diff in ['Easy', 'Medium', 'Hard']:
+        total = next((q['count'] for q in all_count if q['difficulty'] == diff), 0)
+        solved = next((s['count'] for s in submit_stats['acSubmissionNum'] if s['difficulty'] == diff), 0)
+        table.add_row(f"[dim]{diff}:[/dim] {solved}/{total}")
+
+    return Panel(table, title="[bold green]Progress[/bold green]", border_style="green")
+
+def create_social_links(user, websites=None):
+    links = []
+    if user['githubUrl']:
+        links.append(f"[blue]GitHub[/blue]: {user['githubUrl']}")
+    if user['linkedinUrl']:
+        links.append(f"[blue]LinkedIn[/blue]: {user['linkedinUrl']}")
+    if user['twitterUrl']:
+        links.append(f"[blue]Twitter[/blue]: {user['twitterUrl']}")
+
+    if websites:
+        for site in websites:
+            url = f"https://{site}" if not site.startswith(('http://', 'https://')) else site
+            links.append(f"[blue]Website[/blue]: {url}")
+
+    return "\n".join(links) if links else "No social links"
+
+def create_language_stats(data):
+    if not data or 'matchedUser' not in data:
+        return None
+
+    lang_stats = data['matchedUser']['languageProblemCount']
+    table = Table.grid(padding=(0, 1))
+    table.add_column(justify="left")
+    rows = []
+    sorted_stats = sorted(lang_stats, key=lambda x: x['problemsSolved'], reverse=True)
+
+    for lang in sorted_stats[:5]:
+        rows.append(f"[dim]{lang['languageName']}:[/dim] {lang['problemsSolved']}")
+
+    table.add_row("\n".join(rows))
+    return Panel(table, title="[bold blue]Languages[/bold blue]", border_style="blue", width=35, padding=(0, 1))
+
+def create_contest_stats(contest_info):
+    stats = []
+    rating = contest_info.get('userContestRanking', {}).get('rating', 0)
+    attended = contest_info.get('userContestRanking', {}).get('attendedContestsCount', 0)
+    stats.append(f"[dim]Rating:[/dim] {rating:.1f}")
+    stats.append(f"[dim]Contests:[/dim] {attended}")
+    return "\n".join(stats)
+
+def create_skill_stats(data):
+    if not data.get('skillStats'):
+        return None
+
+    skills = data['skillStats']['matchedUser']['tagProblemCounts']
+    table = Table(
+        title="[bold magenta]Skills[/bold magenta]",
+        box=box.ROUNDED,
+        border_style="magenta",
+        width=65,
+        pad_edge=False
+    )
+    table.add_column("Level", style="magenta")
+    table.add_column("Tag", style="cyan")
+    table.add_column("Solved", justify="right")
+
+    for level in ['advanced', 'intermediate', 'fundamental']:
+        for skill in skills[level][:2]:
+            table.add_row(level.capitalize(), skill['tagName'], str(skill['problemsSolved']))
 
     return table
 
 def display_user_stats(data):
     console.clear()
-    width = min(console.width - 4, 150)  # Limit max width
-    first_width = width // 3 - 2
-    second_width = (width * 2) // 3 - 2
+    width = min(console.width - 4, 180)
+    profile_width, stats_width, progress_width = 65, 35, 30
 
     if not data.get('userProfile'):
         console.print(Panel("Could not fetch user profile", border_style="red"))
@@ -48,88 +123,77 @@ def display_user_stats(data):
     user = data['userProfile']['matchedUser']
     profile = user['profile']
 
-    # Create main profile info
     profile_table = Table.grid(padding=(0, 1))
     profile_table.add_column(justify="left")
     profile_info = [
-        f"[bold cyan]{user['username']}[/bold cyan]",
-        f"[dim]Ranking:[/dim] {profile['ranking']}",
-        f"[dim]Company:[/dim] {profile['company'] or 'Not specified'}",
-        f"[dim]Location:[/dim] {profile['countryName'] or 'Not specified'}"
+        f"[bold cyan]{user.get('username', 'N/A')}[/bold cyan]",
+        f"[dim]Name:[/dim] {profile.get('realName') or 'Not specified'}",
+        f"[dim]Ranking:[/dim] {profile.get('ranking', 'N/A')}",
     ]
-    if profile['skillTags']:
-        skills = ", ".join(profile['skillTags'])
-        profile_info.append(f"[dim]Skills:[/dim] {skills}")
+
+    for label, field in [('Company', 'company'), ('Job Title', 'jobTitle'),
+                        ('School', 'school'), ('Location', 'countryName')]:
+        if field in profile and profile[field]:
+            profile_info.append(f"[dim]{label}:[/dim] {profile[field]}")
+
+    if profile.get('skillTags'):
+        profile_info.append(f"[dim]Skills:[/dim] {', '.join(profile['skillTags'])}")
+
+    social_links = create_social_links(user, profile.get('websites', []))
+    if social_links != "No social links":
+        profile_info.append("\n" + social_links)
+
     profile_table.add_row("\n".join(profile_info))
+    profile_panel = Panel(profile_table, title="[bold cyan]Profile Info[/bold cyan]",
+                         border_style="cyan", width=profile_width, padding=(0, 1))
 
-    # Create contest stats if available
-    contest_panel = None
-    if data.get('contestInfo') and data['contestInfo'].get('userContestRanking'):
-        contest = data['contestInfo']['userContestRanking']
-        contest_table = Table.grid(padding=(0, 1))
-        contest_table.add_column(justify="left")
-        contest_table.add_row(
-            f"[yellow]Rating: {contest['rating']}[/yellow]\n"
-            f"Global Rank: {contest['globalRanking']}\n"
-            f"Top: {contest['topPercentage']}%\n"
-            f"Contests: {contest['attendedContestsCount']}"
-        )
-        contest_panel = Panel(
-            contest_table,
-            title="[bold yellow]Contest Stats[/bold yellow]",
-            border_style="yellow",
-            width=second_width
-        )
+    stats_table = Table.grid(padding=(0, 1))
+    stats_table.add_column(justify="left")
+    stats = [
+        f"[dim]Solutions:[/dim] {profile.get('solutionCount', 0)} ({profile.get('solutionCountDiff', 0):+d})",
+        f"[dim]Reputation:[/dim] {profile.get('reputation', 0)} ({profile.get('reputationDiff', 0):+d})",
+        f"[dim]Views:[/dim] {profile.get('postViewCount', 0)} ({profile.get('postViewCountDiff', 0):+d})",
+    ]
+    if 'categoryDiscussCount' in profile:
+        stats.append(f"[dim]Discussions:[/dim] {profile['categoryDiscussCount']} ({profile.get('categoryDiscussCountDiff', 0):+d})")
+    stats_table.add_row("\n".join(stats))
 
-    # Create top row grid
+    progress = create_progress_panel(data)
+    if progress:
+        progress.width = progress_width
+
+    middle_column = Table.grid(padding=(0, 1))
+    if data.get('languageStats'):
+        middle_column.add_row(create_language_stats(data['languageStats']))
+        middle_column.add_row("")
+    if data.get('contestInfo'):
+        contest_panel = Panel(create_contest_stats(data['contestInfo']),
+                            title="[bold yellow]Contest Stats[/bold yellow]",
+                            border_style="yellow", width=stats_width, padding=(0, 1))
+        middle_column.add_row(contest_panel)
+
+    right_column = Table.grid()
+    if progress:
+        right_column.add_row(progress)
+        right_column.add_row("")
+    stats_panel = Panel(stats_table, title="[bold blue]Activity Stats[/bold blue]",
+                       border_style="blue", width=progress_width, padding=(0, 1))
+    right_column.add_row(stats_panel)
+
     top_grid = Table.grid(padding=(0, 2))
-    top_grid.add_column(width=first_width)
-    top_grid.add_column(width=second_width)
-    top_grid.add_row(
-        Panel(profile_table, title="[bold cyan]Profile Info[/bold cyan]", border_style="cyan"),
-        contest_panel or ""
+    top_grid.add_row(profile_panel, middle_column, right_column)
+
+    bottom_grid = Table.grid(padding=(0, 2))
+    bottom_grid.add_column(width=65)
+    bottom_grid.add_column(width=65)
+    bottom_grid.add_row(
+        create_skill_stats(data) if data.get('skillStats') else "",
+        create_recent_activity(data['recentAcSubmissions']) if data.get('recentAcSubmissions') else ""
     )
+
     console.print("\n")
     console.print(top_grid)
     console.print("\n")
-
-    # Create bottom row grid
-    bottom_grid = Table.grid(padding=(0, 2))
-    bottom_grid.add_column(width=first_width)
-    bottom_grid.add_column(width=second_width)
-
-    # Language stats
-    lang_panel = None
-    if data.get('languageStats'):
-        lang_stats = data['languageStats']['matchedUser']['languageProblemCount']
-        lang_table = Table(
-            title="[bold cyan]Languages[/bold cyan]",
-            box=box.ROUNDED,
-            border_style="cyan",
-            padding=(0, 1),
-            width=first_width
-        )
-        lang_table.add_column("Language", style="cyan")
-        lang_table.add_column("Solved", justify="right")
-
-        for lang in sorted(lang_stats, key=lambda x: x['problemsSolved'], reverse=True)[:5]:
-            lang_table.add_row(
-                lang['languageName'],
-                str(lang['problemsSolved'])
-            )
-        lang_panel = lang_table
-
-    # Recent submissions
-    recent_panel = None
-    if data.get('recentAcSubmissions'):
-        recent_table = create_recent_activity(data['recentAcSubmissions'])
-        if recent_table:
-            recent_panel = recent_table
-
-    bottom_grid.add_row(
-        lang_panel or "",
-        recent_panel or ""
-    )
     console.print(bottom_grid)
     console.print("\n")
 

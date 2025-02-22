@@ -1,5 +1,6 @@
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
+import requests
 
 def create_leetcode_client(csrf_token: str, session_id: str):
     headers = {
@@ -177,3 +178,37 @@ def fetch_problem_list(
     except Exception as e:
         print(f"Error fetching data: {str(e)}")
         return None
+
+
+def get_daily_question():
+  url = "https://leetcode.com/graphql"
+  query = """
+  query questionOfToday {
+    activeDailyCodingChallengeQuestion {
+      date
+      userStatus
+      link
+      question {
+        titleSlug
+        title
+        translatedTitle
+        acRate
+        difficulty
+        freqBar
+        frontendQuestionId: questionFrontendId
+        isFavor
+        paidOnly: isPaidOnly
+        status
+        hasVideoSolution
+        hasSolution
+        topicTags {
+          name
+          id
+          slug
+        }
+      }
+    }
+  }
+  """
+  response = requests.post(url, json={'query': query})
+  return response.json()

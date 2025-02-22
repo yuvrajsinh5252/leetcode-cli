@@ -4,6 +4,8 @@ from rich.panel import Panel
 from rich import box
 from datetime import datetime
 
+import typer
+
 console = Console()
 
 def format_timestamp(timestamp):
@@ -84,24 +86,70 @@ def create_profile_header(data):
         title="[bold cyan]LeetCode Profile[/bold cyan]"
     )
 
-def display_problem_stats(data):
+def display_user_stats(data):
     console.clear()
     console.print("\n")
 
-    # Display profile header
-    console.print(create_profile_header(data))
+    if not data.get('userProfile'):
+        console.print(Panel("Could not fetch user profile", border_style="red"))
+        return
+
+    user = data['userProfile']['matchedUser']
+    profile = user['profile']
+
+    # Display basic profile info
+    profile_table = Table.grid(padding=(0, 2))
+    profile_table.add_column(justify="left")
+
+    profile_info = [
+        f"[bold cyan]{user['username']}[/bold cyan]",
+        f"[dim]Ranking:[/dim] {profile['ranking']}",
+        f"[dim]Company:[/dim] {profile['company'] or 'Not specified'}",
+        f"[dim]Location:[/dim] {profile['countryName'] or 'Not specified'}"
+    ]
+
+    if profile['skillTags']:
+        skills = ", ".join(profile['skillTags'])
+        profile_info.append(f"[dim]Skills:[/dim] {skills}")
+
+    profile_table.add_row("\n".join(profile_info))
+    console.print(Panel(profile_table, title="[bold cyan]Profile Info[/bold cyan]", border_style="cyan"))
     console.print("\n")
 
-    # Display recent submissions
-    recent_submissions = data.get('matchedUser', {}).get('recentSubmissionList', [])
-    if recent_submissions:
-        recent_activity = create_recent_activity(recent_submissions)
-        if recent_activity:
-            console.print(recent_activity)
-    else:
-        console.print(Panel("No recent activity", border_style="cyan"))
+    # Display contest info if available
+    if data.get('contestInfo') and data['contestInfo'].get('userContestRanking'):
+        contest = data['contestInfo']['userContestRanking']
+        contest_table = Table.grid(padding=(0, 2))
+        contest_table.add_column(justify="left")
+        contest_table.add_row(
+            f"Rating: [yellow]{contest['rating']}[/yellow]\n"
+            f"Global Rank: {contest['globalRanking']}/{contest['totalParticipants']}\n"
+            f"Top: {contest['topPercentage']}%\n"
+            f"Contests: {contest['attendedContestsCount']}"
+        )
+        console.print(Panel(contest_table, title="[bold yellow]Contest Stats[/bold yellow]", border_style="yellow"))
+        console.print("\n")
 
-    console.print("\n")
+    # Display progress
+    if data.get('progress'):
+        progress = data['progress']
+        console.print(create_profile_header(progress))
+        console.print("\n")
+
+    # Display language stats
+    if data.get('languageStats'):
+        lang_stats = data['languageStats']['matchedUser']['languageProblemCount']
+        lang_table = Table(title="Languages", box=box.ROUNDED, border_style="cyan")
+        lang_table.add_column("Language", style="cyan")
+        lang_table.add_column("Problems Solved", justify="right")
+
+        for lang in sorted(lang_stats, key=lambda x: x['problemsSolved'], reverse=True)[:5]:
+            lang_table.add_row(
+                lang['languageName'],
+                str(lang['problemsSolved'])
+            )
+        console.print(lang_table)
+        console.print("\n")
 
 def display_problem_list(data):
     console.clear()

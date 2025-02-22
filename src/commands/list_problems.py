@@ -2,12 +2,12 @@
 from rich.spinner import Spinner
 from rich.live import Live
 from typing import Optional
-from src.lib.ui import display_problem_list
-from src.server.auth import Auth
+from ..lib.ui import display_problem_list
+from ..server.auth import Auth
 
 import typer
 
-from src.server.api import fetch_problem_list
+from ..server.api import fetch_problem_list
 
 status_map = {
   "attempted": "TRIED",

@@ -1,5 +1,5 @@
 import typer
-from src.server.auth import Auth
+from ..server.auth import Auth
 
 auth_manager = Auth()
 

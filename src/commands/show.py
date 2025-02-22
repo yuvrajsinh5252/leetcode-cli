@@ -1,8 +1,8 @@
 import typer
 from rich.console import Console
-from src.lib.problem_ui import ProblemDetails
-from src.server.auth import Auth
-from src.server.solution_manager import SolutionManager
+from ..lib.problem_ui import ProblemDetails
+from ..server.auth import Auth
+from ..server.solution_manager import SolutionManager
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())

@@ -1,6 +1,6 @@
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
-from src.server.session_manager import SessionManager
+from ..server.session_manager import SessionManager
 import requests
 import typer
 

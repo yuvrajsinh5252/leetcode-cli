@@ -1,6 +1,6 @@
-from server.api import fetch_user_profile
+from ..server.api import fetch_user_profile
 from rich.spinner import Spinner
-from src.lib.ui import display_user_stats
+from ..lib.ui import display_user_stats
 from rich.live import Live
 
 def profile():

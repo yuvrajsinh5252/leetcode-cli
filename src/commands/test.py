@@ -1,7 +1,7 @@
 import typer
 from pathlib import Path
-from src.server.auth import Auth
-from src.server.solution_manager import SolutionManager
+from ..server.auth import Auth
+from ..server.solution_manager import SolutionManager
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())

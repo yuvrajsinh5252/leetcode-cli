@@ -1,8 +1,8 @@
 import typer
 
-from src.server.solution_manager import SolutionManager
-from src.server.auth import Auth
-from commands.test import map_lang
+from ..server.solution_manager import SolutionManager
+from ..server.auth import Auth
+from .test import map_lang
 
 solution_manager = SolutionManager(Auth().get_session())
 

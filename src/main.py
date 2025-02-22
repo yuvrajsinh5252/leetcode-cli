@@ -1,7 +1,7 @@
-import profile
 import typer
-from src import show, profile
 from src.commands.daily import daily
+from src.commands.show import show
+from src.commands.profile import profile
 from src.commands.edit import edit
 from src.commands.list_problems import list_problems
 from src.commands.login import login, logout

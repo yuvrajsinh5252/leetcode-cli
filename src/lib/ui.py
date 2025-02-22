@@ -83,8 +83,12 @@ def create_language_stats(data):
 
 def create_contest_stats(contest_info):
     stats = []
-    rating = contest_info.get('userContestRanking', {}).get('rating', 0)
-    attended = contest_info.get('userContestRanking', {}).get('attendedContestsCount', 0)
+    ranking = contest_info.get('userContestRanking', {}) if contest_info else {}
+    if not ranking:
+        return "No contest stats"
+
+    rating = ranking.get('rating', 0)
+    attended = ranking.get('attendedContestsCount', 0)
     stats.append(f"[dim]Rating:[/dim] {rating:.1f}")
     stats.append(f"[dim]Contests:[/dim] {attended}")
     return "\n".join(stats)
@@ -166,7 +170,7 @@ def display_user_stats(data):
     if data.get('languageStats'):
         middle_column.add_row(create_language_stats(data['languageStats']))
         middle_column.add_row("")
-    if data.get('contestInfo'):
+    if "contestInfo" in data and data.get('contestInfo'):
         contest_panel = Panel(create_contest_stats(data['contestInfo']),
                             title="[bold yellow]Contest Stats[/bold yellow]",
                             border_style="yellow", width=stats_width, padding=(0, 1))

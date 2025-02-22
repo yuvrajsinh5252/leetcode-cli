@@ -1,6 +1,8 @@
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
+from src.server.session_manager import SessionManager
 import requests
+import typer
 
 def create_leetcode_client(csrf_token: str, session_id: str):
     headers = {
@@ -20,7 +22,14 @@ def create_leetcode_client(csrf_token: str, session_id: str):
         fetch_schema_from_transport=False
     )
 
-def fetch_user_profile(username: str = "yuvrajsinh5252"):
+def fetch_user_profile():
+  session = SessionManager().load_session()
+  username = session.get("user_name") if session else None
+
+  if not username:
+    typer.echo(typer.style("❌ Please login first using the login command", fg=typer.colors.RED))
+    raise typer.Exit(1)
+
   client = create_leetcode_client("csrf_token", "session_id")
   queries = {
     "userProfile": """

@@ -1,7 +1,5 @@
 from typing import Dict, Any
 import time
-import json
-import typer
 
 class SolutionManager:
     def __init__(self, session):
@@ -81,6 +79,17 @@ class SolutionManager:
     def submit_solution(self, title_slug: str, code: str, lang: str = "python3") -> Dict[str, Any]:
         """Submit a solution to LeetCode"""
         try:
+            if title_slug.isdigit():
+                response = self.session.get(f"{self.BASE_URL}/api/problems/all/")
+                if response.status_code == 200:
+                    problems = response.json().get('stat_status_pairs', [])
+                    for problem in problems:
+                        if str(problem['stat']['frontend_question_id']) == title_slug:
+                            title_slug = problem['stat']['question__title_slug']
+                            break
+                    else:
+                        return {"success": False, "error": f"Question number {title_slug} not found"}
+
             self._clean_session_cookies()
 
             # Get question ID
@@ -93,7 +102,6 @@ class SolutionManager:
             submit_url = f"{self.BASE_URL}/problems/{title_slug}/submit/"
 
             csrf_token = self._get_csrf_token()
-            typer.echo(f"Using CSRF token: {csrf_token}")
 
             headers = {
                 'referer': f"{self.BASE_URL}/problems/{title_slug}/",
@@ -109,33 +117,38 @@ class SolutionManager:
                 "typed_code": code
             }
 
-            typer.echo(f"Sending request to {submit_url}")
             response = self.session.post(submit_url, json=data, headers=headers)
 
             if response.status_code != 200:
-                typer.echo(f"Error response: {response.text}", err=True)
                 return {"success": False, "error": f"Submission failed with status {response.status_code}"}
 
             try:
                 result_data = response.json()
                 submission_id = result_data.get('submission_id')
                 if submission_id:
-                    typer.echo(f"Got submission ID: {submission_id}")
                     return self.get_submission_result(submission_id)
                 else:
-                    typer.echo("No submission ID in response", err=True)
                     return {"success": False, "error": "No submission ID received"}
             except ValueError as e:
-                typer.echo(f"Failed to parse response: {response.text}", err=True)
                 return {"success": False, "error": f"Failed to parse response: {str(e)}"}
 
         except Exception as e:
-            typer.echo(f"Submission error: {str(e)}", err=True)
             return {"success": False, "error": f"Submission error: {str(e)}"}
 
     def test_solution(self, title_slug: str, code: str, lang: str = "python3", full: bool = False) -> Dict[str, Any]:
         """Test a solution with LeetCode test cases"""
         try:
+            if title_slug.isdigit():
+                response = self.session.get(f"{self.BASE_URL}/api/problems/all/")
+                if response.status_code == 200:
+                    problems = response.json().get('stat_status_pairs', [])
+                    for problem in problems:
+                        if str(problem['stat']['frontend_question_id']) == title_slug:
+                            title_slug = problem['stat']['question__title_slug']
+                            break
+                    else:
+                        return {"success": False, "error": f"Question number {title_slug} not found"}
+
             self._clean_session_cookies()
 
             # Get question data first
@@ -153,7 +166,6 @@ class SolutionManager:
             url = f"{self.BASE_URL}/problems/{title_slug}/{endpoint}/"
 
             csrf_token = self.session.cookies.get('csrftoken', '')
-            typer.echo(f"Using CSRF token: {csrf_token}")
 
             headers = {
                 'referer': f"{self.BASE_URL}/problems/{title_slug}/",
@@ -172,28 +184,23 @@ class SolutionManager:
                 'judge_type': 'small'
             }
 
-            typer.echo(f"Sending request to {url}")
             response = self.session.post(url, json=data, headers=headers)
 
             if response.status_code != 200:
-                typer.echo(f"Error response: {response.text}", err=True)
                 return {"success": False, "error": f"Request failed with status {response.status_code}"}
 
             try:
                 result_data = response.json()
                 submission_id = result_data.get(sid_key)
                 if submission_id:
-                    typer.echo(f"Got submission ID: {submission_id}")
                     return self.get_test_result(submission_id)
+                    return temp
                 else:
-                    typer.echo("No submission ID in response", err=True)
                     return {"success": False, "error": "No submission ID received"}
             except ValueError as e:
-                typer.echo(f"Failed to parse response: {response.text}", err=True)
                 return {"success": False, "error": f"Failed to parse response: {str(e)}"}
 
         except Exception as e:
-            typer.echo(f"Test error: {str(e)}", err=True)
             return {"success": False, "error": f"Test error: {str(e)}"}
 
     def _format_output(self, output) -> str:
@@ -204,61 +211,89 @@ class SolutionManager:
             return output.strip('[]"')
         return str(output)
 
-    def get_test_result(self, submission_id: str, timeout: int = 30) -> Dict[str, Any]:
-        """Poll for results with timeout"""
-        url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
-        typer.echo(f"Polling for results at {url}")
+    def _process_submission_result(self, result: Dict[str, Any], is_test: bool = False) -> Dict[str, Any]:
+        """Process submission/test results and return standardized output"""
+        if not result.get('run_success', True):
+            if result.get('compile_error'):
+                return {
+                    "success": False,
+                    "status": "Compilation Error",
+                    "error": result.get('compile_error', 'Unknown compilation error'),
+                    "full_error": result.get('full_compile_error', '')
+                }
+            if result.get('status_code') == 14:
+                return {
+                    "success": False,
+                    "status": "Time Limit Exceeded",
+                    "error": "Your code took too long to execute",
+                    "runtime": result.get('status_runtime', 'N/A')
+                }
+            return {
+                "success": False,
+                "status": "Runtime Error",
+                "error": result.get('runtime_error', 'Unknown runtime error'),
+                "full_error": result.get('full_runtime_error', '')
+            }
 
-        for i in range(timeout):
+        response = {
+            "success": True,
+            "status": result.get('status_msg', 'Accepted'),
+            "runtime": result.get('status_runtime', result.get('runtime', 'N/A')),
+            "memory": result.get('status_memory', result.get('memory', 'N/A')),
+            "total_testcases": result.get('total_testcases', 0),
+            "passed_testcases": result.get('total_correct', 0)
+        }
+
+        if is_test:
+            code_answers = result.get('code_answer', [])
+            expected_answers = result.get('expected_code_answer', [])
+            is_correct = all(a == b for a, b in zip(code_answers, expected_answers))
+
+            response.update({
+                "status": "Accepted" if is_correct else "Wrong Answer",
+                "output": self._format_output(code_answers),
+                "expected": self._format_output(expected_answers),
+                "total_correct": sum(1 for a, b in zip(code_answers, expected_answers) if a == b)
+            })
+
+        return response
+
+    def get_test_result(self, submission_id: str, timeout: int = 30) -> Dict[str, Any]:
+        """Poll for test results with timeout"""
+        url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
+
+        for _ in range(timeout):
             try:
                 time.sleep(1)
-                typer.echo(f"Attempt {i+1}/{timeout}...")
+                response = self.session.get(url)
 
+                if response.status_code != 200:
+                    continue
+
+                result = response.json()
+                if result.get('state') == 'SUCCESS':
+                    return self._process_submission_result(result, is_test=True)
+            except Exception as e:
+                continue
+
+        return {"success": False, "error": "Timeout waiting for results"}
+
+    def get_submission_result(self, submission_id: str, timeout: int = 20) -> Dict[str, Any]:
+        """Poll for submission results"""
+        url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
+
+        for _ in range(timeout):
+            try:
                 response = self.session.get(url)
                 if response.status_code != 200:
                     continue
 
                 result = response.json()
-                typer.echo(f"Got response: {json.dumps(result, indent=2)}")
-
                 if result.get('state') == 'SUCCESS':
-                    return {
-                        "success": True,
-                        "status": result.get('status_msg', 'Unknown'),
-                        "input": result.get('input', 'N/A'),
-                        "output": self._format_output(result.get('code_answer', [])),
-                        "expected": self._format_output(result.get('expected_code_answer', [])),
-                        "runtime": result.get('status_runtime', 'N/A'),
-                        "memory": result.get('status_memory', 'N/A'),
-                        "total_correct": result.get('total_correct', 0),
-                        "total_testcases": result.get('total_testcases', 0)
-                    }
+                    return self._process_submission_result(result, is_test=False)
+
+                time.sleep(1)
             except Exception as e:
-                typer.echo(f"Error checking result: {str(e)}", err=True)
                 continue
-
-        return {"success": False, "error": "Timeout waiting for results"}
-
-    def get_submission_result(self, submission_id: str) -> Dict[str, Any]:
-        """Poll for submission results"""
-        check_url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
-
-        for _ in range(20):  #
-            response = self.session.get(check_url)
-            if response.status_code != 200:
-                return {"success": False, "error": f"Failed to get results: {response.status_code}"}
-
-            result = response.json()
-            if result.get('state') == 'SUCCESS':
-                return {
-                    "success": True,
-                    "status": result.get('status_msg', 'Unknown'),
-                    "runtime": result.get('runtime', 'N/A'),
-                    "memory": result.get('memory', 'N/A'),
-                    "total_testcases": result.get('total_testcases', 0),
-                    "passed_testcases": result.get('total_correct', 0)
-                }
-
-            time.sleep(1)
 
         return {"success": False, "error": "Timeout waiting for results"}

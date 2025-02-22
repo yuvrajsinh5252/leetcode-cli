@@ -40,14 +40,18 @@ def test(
 
     if result["success"]:
         status_color = typer.colors.GREEN if result["status"] == "Accepted" else typer.colors.RED
-        typer.echo(typer.style(f"\n✨ Status: {result['status']}", fg=status_color))
+        status_prefix = "✨" if result['status'] == "Accepted" else "❌"
+        typer.echo(typer.style(f"\n{status_prefix} Status: {result['status']}", fg=status_color))
         if "runtime" in result:
-            typer.echo(f"⏱️  Runtime: {result['runtime']}")
+            typer.echo(f"⏱️ Runtime: {result['runtime']}")
         if "memory" in result:
             typer.echo(f"💾 Memory: {result['memory']}")
-        typer.echo("\nTest Case Results:")
-        typer.echo(f"📥 Input: {result['input']}")
-        typer.echo(f"📤 Your Output: {result['output']}")
-        typer.echo(f"✅ Expected: {result['expected']}")
+        typer.echo("\nTest Case Results:\n")
+        typer.echo(f"📤 Your Output:\n{result['output']}")
+        typer.echo(f"✅ Expected:\n{result['expected']}")
     else:
-        typer.echo(typer.style(f"\n❌ {result['error']}", fg=typer.colors.RED))
+        typer.echo(typer.style(f"\n❌ {result['status']}", fg=typer.colors.BRIGHT_RED))
+        error_message = f"\n{result['error']}"
+        if result.get('full_error'):
+            error_message += f"\n\nFull error:\n{result['full_error']}"
+        typer.echo(typer.style(error_message, fg=typer.colors.RED))

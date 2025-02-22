@@ -3,7 +3,6 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.layout import Layout
 from rich.box import ROUNDED
-from rich.text import Text
 from bs4 import BeautifulSoup, Tag
 import json
 from dataclasses import dataclass

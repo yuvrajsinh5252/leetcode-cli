@@ -3,16 +3,16 @@
 A command-line interface tool for LeetCode that helps you practice coding problems directly from your terminal. This CLI application streamlines the process of accessing, solving, and submitting LeetCode problems without leaving your development environment.
 
 ### Commands
-- `leetcode-cli login` - Login to your LeetCode account
-- `leetcode-cli logout` - Logout from your LeetCode account
-- `leetcode-cli profile` - Show your LeetCode profile
-- `leetcode-cli daily` - Show today's daily challenge
-- `leetcode-cli list` - List all problems
-- `leetcode-cli show` - Show problem details
-- `leetcode-cli test` - Test your solution
-- `leetcode-cli test` - Test your solution
-- `leetcode-cli submit` - Submit your solution
-- `leetcode-cli edit` - Edit your solution
+- `lc login` - Login to your LeetCode account
+- `lc logout` - Logout from your LeetCode account
+- `lc profile` - Show your LeetCode profile
+- `lc daily` - Show today's daily challenge
+- `lc list` - List all problems
+- `lc show` - Show problem details
+- `lc test` - Test your solution
+- `lc test` - Test your solution
+- `lc submit` - Submit your solution
+- `lc edit` - Edit your solution
 
 ### Installation
 

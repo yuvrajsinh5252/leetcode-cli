@@ -93,6 +93,16 @@ def fetch_user_profile(username: str = "yuvrajsinh5252"):
           }
         }
       }
+    """,
+    "recentAcSubmissions": """
+      query recentAcSubmissions($username: String!, $limit: Int!) {
+        recentAcSubmissionList(username: $username, limit: $limit) {
+          id
+          title
+          titleSlug
+          timestamp
+        }
+      }
     """
   }
 
@@ -101,7 +111,7 @@ def fetch_user_profile(username: str = "yuvrajsinh5252"):
     try:
       results[name] = client.execute(
         gql(query),
-        variable_values={"username": username}
+        variable_values={"username": username, "limit": 10}
       )
     except Exception as e:
       print(f"Error fetching {name}: {str(e)}")

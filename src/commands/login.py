@@ -31,3 +31,12 @@ def login():
         typer.echo(typer.style(f"\n✓ Successfully logged in as {result['user_name']}!", fg=typer.colors.GREEN))
     else:
         typer.echo(typer.style(f"\n✗ Login failed: {result['message']}", fg=typer.colors.RED))
+
+def logout():
+    """Logout from LeetCode"""
+    if not auth_manager.is_authenticated:
+        typer.echo(typer.style("❌ You are not logged in", fg=typer.colors.RED))
+        return
+
+    auth_manager.session_manager.clear_session()
+    typer.echo(typer.style("✓ Successfully logged out", fg=typer.colors.GREEN))

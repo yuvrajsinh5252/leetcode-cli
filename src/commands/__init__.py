@@ -1,4 +1,4 @@
 from .show import show
-from .details import details
+from .profile import profile
 
-__all__ = ["show", "details"]
+__all__ = ["show", "profile"]

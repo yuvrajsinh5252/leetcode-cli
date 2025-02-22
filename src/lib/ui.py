@@ -102,3 +102,35 @@ def display_problem_stats(data):
         console.print(Panel("No recent activity", border_style="cyan"))
 
     console.print("\n")
+
+def display_problem_list(data):
+    console.clear()
+    console.print("\n")
+
+    table = Table(
+        title="Problem List",
+        box=box.ROUNDED,
+        border_style="cyan",
+        pad_edge=False,
+        show_edge=True
+    )
+
+    table.add_column("ID", style="dim", width=6)
+    table.add_column("Title", style="cyan")
+    table.add_column("Difficulty", justify="center", width=10)
+    table.add_column("Status", justify="center", width=8)
+    table.add_column("AC Rate", justify="right", width=8)
+
+    for problem in data['problemsetQuestionList']['questions']:
+        status_icon = "[green]✓" if problem['status'] == "ac" else "[red]✗"
+        ac_rate = f"{problem['acRate']:.1f}%"
+        table.add_row(
+            problem['frontendQuestionId'],
+            problem['title'],
+            problem['difficulty'],
+            status_icon,
+            ac_rate
+        )
+
+    console.print(table)
+    console.print("\n")

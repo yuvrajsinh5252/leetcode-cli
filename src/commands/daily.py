@@ -4,7 +4,7 @@ from ..server.api import get_daily_question
 
 def daily(
     lang: str = typer.Argument("py", help="Programming language to use."),
-    editor: str = typer.Option("code", '-e', help="Code editor to use."),
+    editor: str = typer.Option("vim", '-e', help="Code editor to use."),
 ):
     """Check the daily problem."""
     from .show import show

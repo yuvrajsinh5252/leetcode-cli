@@ -9,7 +9,7 @@ solution_manager = SolutionManager(Auth().get_session())
 def edit(
   problem: str = typer.Argument(..., help="Problem name or id."),
   lang: str = typer.Argument("cpp", help="Programming language to use."),
-  editor: str = typer.Option("vim", '-e', '--editor', help="vim editor to use."),
+  editor: str = typer.Option("vim", '-e', '--editor', help="Editor to use for code editing."),
 ):
   """Solves a problem by passing lang param and open it with your code editor."""
   question_data = solution_manager.get_question_data(problem).get('data', {}).get('question')

@@ -10,8 +10,15 @@ map_lang = {
     "py": "python3",
     "java": "java",
     "js": "javascript",
+    "ts": "typescript",
     "c": "c",
-    "cpp": "cpp"
+    "cpp": "cpp",
+    "cs": "csharp",
+    "go": "golang",
+    "rb": "ruby",
+    "swift": "swift",
+    "rs": "rust",
+    "php": "php"
 }
 
 def test(
@@ -33,17 +40,22 @@ def test(
     lang = map_lang.get(file.suffix[1:])
     if not lang:
         typer.echo(typer.style(f"❌ Unsupported file extension: {file.suffix}", fg=typer.colors.RED))
+        typer.echo(f"Supported extensions: {', '.join(map_lang.keys())}")
         raise typer.Exit(1)
 
     typer.echo(typer.style("🧪 Testing solution with LeetCode test cases...", fg=typer.colors.YELLOW))
-    result = solution_manager.test_solution(problem, code, lang)
+    try:
+        result = solution_manager.test_solution(problem, code, lang)
+    except Exception as e:
+        typer.echo(typer.style(f"❌ Error connecting to LeetCode: {str(e)}", fg=typer.colors.RED))
+        raise typer.Exit(1)
 
     if result["success"]:
         status_color = typer.colors.GREEN if result["status"] == "Accepted" else typer.colors.RED
         status_prefix = "✨" if result['status'] == "Accepted" else "❌"
         typer.echo(typer.style(f"\n{status_prefix} Status: {result['status']}", fg=status_color))
         if "runtime" in result:
-            typer.echo(f"⏱️ Runtime: {result['runtime']}")
+            typer.echo(f"⏱️Runtime: {result['runtime']}")
         if "memory" in result:
             typer.echo(f"💾 Memory: {result['memory']}")
         typer.echo("\nTest Case Results:\n")

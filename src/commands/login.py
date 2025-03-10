@@ -11,26 +11,36 @@ def login():
             typer.echo(typer.style(f"Already logged in as {saved_session['user_name']}!", fg=typer.colors.GREEN))
             return
 
-    typer.echo(typer.style("To login, you'll need both CSRF and LEETCODE_SESSION tokens:", fg=typer.colors.YELLOW))
-    typer.echo("\n1. Open LeetCode in your browser")
-    typer.echo("2. Press F12 to open Developer Tools")
-    typer.echo("3. Go to Application tab > Cookies > leetcode.com")
-    typer.echo("4. Find and copy both 'csrftoken' and 'LEETCODE_SESSION' values\n")
+    instruction = f"""
+                    📝 To get your login tokens:
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    1️  Open LeetCode in your browser
+    2️  Press F12 to open Developer Tools
+    3️  Go to Application tab → Cookies → leetcode.com
+    4️  Find and copy both 'csrftoken' and 'LEETCODE_SESSION'
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    """
 
-    csrf_token = typer.prompt("Please enter your CSRF token")
-    csrf_result = auth_manager.verify_csrf_token(csrf_token)
+    typer.echo(typer.style(instruction, fg=typer.colors.BRIGHT_BLACK))
 
-    if not csrf_result["success"]:
-        typer.echo(typer.style(f"\n✗ CSRF verification failed: {csrf_result['message']}", fg=typer.colors.RED))
-        return
+    while True:
+        csrf_token = typer.prompt("Please enter your CSRF token")
+        csrf_result = auth_manager.verify_csrf_token(csrf_token)
 
-    leetcode_session = typer.prompt("Please enter your LEETCODE_SESSION token")
-    result = auth_manager.login_with_session(csrf_token, leetcode_session)
+        if not csrf_result["success"]:
+            typer.echo(typer.style(f"\n✗ CSRF verification failed: {csrf_result['message']}", fg=typer.colors.RED))
+            return
 
-    if result["success"]:
-        typer.echo(typer.style(f"\n✓ Successfully logged in as {result['user_name']}!", fg=typer.colors.GREEN))
-    else:
-        typer.echo(typer.style(f"\n✗ Login failed: {result['message']}", fg=typer.colors.RED))
+        leetcode_session = typer.prompt("Please enter your LEETCODE_SESSION token")
+        result = auth_manager.login_with_session(csrf_token, leetcode_session)
+
+        if result["success"]:
+            typer.echo(typer.style(f"\n✓ Successfully logged in as {result['user_name']}!", fg=typer.colors.GREEN))
+            break
+        else:
+            typer.echo(typer.style(f"\n✗ Login failed: {result['message']}", fg=typer.colors.RED))
+            if not typer.confirm("Do you want to try again?", abort=True):
+                break
 
 def logout():
     """Logout from LeetCode"""

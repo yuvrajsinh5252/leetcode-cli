@@ -5,18 +5,35 @@ from ..server.api import get_daily_question
 def daily(
     lang: str = typer.Argument("py", help="Programming language to use."),
     editor: str = typer.Option("vim", '-e', help="Code editor to use."),
+    no_editor: bool = typer.Option(False, "--no-editor", help="Skip opening editor"),
 ):
-    """Check the daily problem."""
+    """
+    Get and work on today's LeetCode daily challenge.
+
+    Fetches the daily coding challenge, displays problem details,
+    and opens it in your preferred editor.
+    """
     from .show import show
 
+    typer.echo(typer.style("Welcome to LeetCode Daily!", fg=typer.colors.GREEN))
     if editor not in ['code', 'vim', 'nano']:
         typer.echo(typer.style(f"❌ Unsupported editor: {editor}", fg=typer.colors.RED))
         raise typer.Exit(1)
 
-    result = get_daily_question()
-    question = result['data']['activeDailyCodingChallengeQuestion']
+    typer.echo(typer.style("Fetching daily challenge...", fg=typer.colors.GREEN), nl=False)
+    try:
+        result = get_daily_question()
+        question = result['data']['activeDailyCodingChallengeQuestion']
+        typer.echo("\r" + " " * 30 + "\r", nl=False)
+    except Exception as e:
+        typer.echo("\n" + typer.style(f"❌ Failed to fetch daily question: {str(e)}", fg=typer.colors.RED))
+        raise typer.Exit(1)
 
     show(problem=question['question']['titleSlug'], layout=True)
 
-    if editor:
-        edit(problem=question['question']['titleSlug'], lang=lang, editor=editor)
+    if not no_editor and editor:
+        try:
+            edit(problem=question['question']['titleSlug'], lang=lang, editor=editor)
+        except Exception as e:
+            typer.echo(typer.style(f"❌ Failed to open editor: {str(e)}", fg=typer.colors.RED))
+            raise typer.Exit(1)

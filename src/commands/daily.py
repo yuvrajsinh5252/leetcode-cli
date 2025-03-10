@@ -15,7 +15,6 @@ def daily(
     """
     from .show import show
 
-    typer.echo(typer.style("Welcome to LeetCode Daily!", fg=typer.colors.GREEN))
     if editor not in ['code', 'vim', 'nano']:
         typer.echo(typer.style(f"❌ Unsupported editor: {editor}", fg=typer.colors.RED))
         raise typer.Exit(1)
@@ -29,7 +28,7 @@ def daily(
         typer.echo("\n" + typer.style(f"❌ Failed to fetch daily question: {str(e)}", fg=typer.colors.RED))
         raise typer.Exit(1)
 
-    show(problem=question['question']['titleSlug'], layout=True)
+    show(problem=question['question']['titleSlug'])
 
     if not no_editor and editor:
         try:

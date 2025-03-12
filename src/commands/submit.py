@@ -4,6 +4,12 @@ from pathlib import Path
 from typing import Optional
 from ..server.auth import Auth
 from ..server.solution_manager import SolutionManager
+from ..lib.submission_ui import (
+    display_auth_error, display_file_not_found_error, display_language_detection_message,
+    display_language_detection_error, display_problem_not_found_error, display_submission_details,
+    display_submission_canceled, create_submission_progress, display_submission_results,
+    display_exception_error
+)
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
@@ -36,12 +42,10 @@ def submit(
     Language is auto-detected from file extension if not specified.
     """
     if not auth_manager.is_authenticated:
-        typer.echo(typer.style("❌ Please login first using the login command", fg=typer.colors.RED))
-        raise typer.Exit(1)
+        display_auth_error()
 
     if not file.exists():
-        typer.echo(typer.style(f"❌ File not found: {file}", fg=typer.colors.RED))
-        raise typer.Exit(1)
+        display_file_not_found_error(file)
 
     try:
         # Auto-detect language from file extension if not provided
@@ -49,44 +53,34 @@ def submit(
             extension = os.path.splitext(file)[1].lower()
             if extension in LANGUAGE_MAP:
                 lang = LANGUAGE_MAP[extension]
-                typer.echo(typer.style(f"🔍 Auto-detected language: {lang}", fg=typer.colors.BLUE))
+                display_language_detection_message(lang)
             else:
-                typer.echo(typer.style(f"❌ Could not detect language for {extension} files. Please specify with --lang", fg=typer.colors.RED))
-                raise typer.Exit(1)
+                display_language_detection_error(extension)
 
         with open(file, 'r') as f:
             code = f.read()
 
         # Confirm submission unless forced
         if not force:
-            typer.echo(typer.style(f"Problem: {problem}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"Language: {lang}", fg=typer.colors.BLUE))
-            typer.echo(typer.style(f"File: {file}", fg=typer.colors.BLUE))
-            if not typer.confirm("Do you want to submit this solution?"):
-                typer.echo(typer.style("Submission canceled", fg=typer.colors.YELLOW))
-                raise typer.Exit(0)
+            problem_name = solution_manager.get_question_data(problem).get('data', {}).get('question', {}).get('title')
 
-        typer.echo(typer.style("📤 Submitting solution...", fg=typer.colors.YELLOW))
-        result = solution_manager.submit_solution(problem, code, lang)
+            if not problem_name:
+                display_problem_not_found_error(problem)
 
-        if result["success"]:
-            status = result['status']
-            status_color = (
-                typer.colors.GREEN if status == "Accepted"
-                else typer.colors.YELLOW if status == "Runtime Error" or status == "Time Limit Exceeded"
-                else typer.colors.RED
-            )
+            if not display_submission_details(problem, problem_name, lang, file):
+                display_submission_canceled()
 
-            typer.echo(typer.style(f"\n✨ Status: {status}", fg=status_color))
-            typer.echo(f"⏱️  Runtime: {result['runtime']}")
-            typer.echo(f"💾 Memory: {result['memory']}")
-            typer.echo(f"✅ Passed: {result['passed_testcases']}/{result['total_testcases']} test cases")
+        if not lang:
+            display_language_detection_error("")
+            return
 
-            if status != "Accepted":
-                typer.echo(typer.style(f"\n❗ Error message: {result.get('error_message', 'No details available')}", fg=typer.colors.RED))
-        else:
-            typer.echo(typer.style(f"\n❌ Submission failed: {result['error']}", fg=typer.colors.RED))
+        with create_submission_progress() as progress:
+            submit_task = progress.add_task("Submitting...", total=1)
+            progress.update(submit_task, advance=0.5)
+            result = solution_manager.submit_solution(problem, code, lang)
+            progress.update(submit_task, advance=0.5)
+
+        display_submission_results(result)
 
     except Exception as e:
-        typer.echo(typer.style(f"❌ Error: {str(e)}", fg=typer.colors.RED))
-        raise typer.Exit(1)
+        display_exception_error(e)

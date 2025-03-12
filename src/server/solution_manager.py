@@ -99,7 +99,7 @@ class SolutionManager:
             if not question_data:
                 return {"success": False, "error": "Question data not found"}
 
-            question_id = question_data['questionFrontendId']
+            question_id = question_data['questionId']
             submit_url = f"{self.BASE_URL}/problems/{title_slug}/submit/"
 
             csrf_token = self._get_csrf_token()
@@ -158,7 +158,7 @@ class SolutionManager:
             if not question_data:
                 return {"success": False, "error": "Question data not found"}
 
-            question_id = question_data['questionFrontendId']
+            question_id = question_data['questionId']
             test_cases = question_data['exampleTestcaseList']
 
             endpoint = 'submit' if full else 'interpret_solution'

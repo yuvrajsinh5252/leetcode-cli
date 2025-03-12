@@ -1,18 +1,16 @@
 import typer
 import os
-from rich.console import Console
 from ..lib.problem_ui import ProblemDetails
 from ..server.auth import Auth
 from ..server.solution_manager import SolutionManager
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
-console = Console()
 
 def show(
     problem: str = typer.Argument(..., help="Problem slug or number (e.g., 'two-sum' or '1')"),
+    save: bool = typer.Option(False, "--save", "-s", help="Save problem description to a file"),
     compact: bool = typer.Option(False, "--compact", "-c", help="Display in compact layout"),
-    save: bool = typer.Option(False, "--save", "-s", help="Save problem description to a file")
 ):
     """
     Show problem details including description and test cases

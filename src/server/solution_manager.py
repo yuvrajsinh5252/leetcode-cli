@@ -49,6 +49,7 @@ class SolutionManager:
             query questionData($titleSlug: String!) {
                 question(titleSlug: $titleSlug) {
                     questionId
+                    questionFrontendId
                     title
                     titleSlug
                     content
@@ -98,7 +99,7 @@ class SolutionManager:
             if not question_data:
                 return {"success": False, "error": "Question data not found"}
 
-            question_id = question_data['questionId']
+            question_id = question_data['questionFrontendId']
             submit_url = f"{self.BASE_URL}/problems/{title_slug}/submit/"
 
             csrf_token = self._get_csrf_token()
@@ -157,7 +158,7 @@ class SolutionManager:
             if not question_data:
                 return {"success": False, "error": "Question data not found"}
 
-            question_id = question_data['questionId']
+            question_id = question_data['questionFrontendId']
             test_cases = question_data['exampleTestcaseList']
 
             endpoint = 'submit' if full else 'interpret_solution'

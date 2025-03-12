@@ -18,8 +18,13 @@ def edit(
     typer.echo(f"Problem {problem} not found.")
     return
 
+  filename_prefix = question_data.get('questionFrontendId') or (
+    problem if problem.isdigit() else question_data.get('questionId')
+  )
+
   def create_file_with_template(lang: str):
-    with open(f"{question_data.get('titleSlug')}.{lang}", "w") as f:
+    filename = f"{filename_prefix}.{lang}"
+    with open(filename, "w") as f:
       for snippet in question_data.get('codeSnippets', []):
           if snippet.get('langSlug').lower() == map_lang.get(lang):
             f.write(snippet.get('code'))
@@ -29,4 +34,4 @@ def edit(
   create_file_with_template(lang)
 
   import subprocess
-  subprocess.run([editor, f"{question_data.get('titleSlug')}.{lang}"])
+  subprocess.run([editor, f"{filename_prefix}.{lang}"])

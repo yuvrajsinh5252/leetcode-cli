@@ -4,7 +4,8 @@ from ..server.api import get_daily_question
 
 def daily(
     lang: str = typer.Argument("py", help="Programming language to use."),
-    editor: str = typer.Option("vim", '-e', help="Code editor to use."),
+    editor: str = typer.Option("vim", '--editor', '-e', help="Code editor to use."),
+    save: bool = typer.Option(False, "--save", "-s", help="Save problem description to a file"),
     no_editor: bool = typer.Option(False, "--no-editor", help="Skip opening editor"),
 ):
     """
@@ -28,7 +29,7 @@ def daily(
         typer.echo("\n" + typer.style(f"❌ Failed to fetch daily question: {str(e)}", fg=typer.colors.RED))
         raise typer.Exit(1)
 
-    show(problem=question['question']['titleSlug'])
+    show(problem=question['question']['titleSlug'], save=save)
 
     if not no_editor and editor:
         try:

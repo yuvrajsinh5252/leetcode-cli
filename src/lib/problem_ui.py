@@ -38,12 +38,12 @@ class FunctionMetadata:
 
 class ProblemDetails:
     def __init__(self, problem_data: dict):
-        required_fields = ['questionId', 'title', 'content', 'difficulty']
+        required_fields = ['questionFrontendId', 'title', 'content', 'difficulty']
         if not all(field in problem_data for field in required_fields):
             raise ValueError("Missing required problem data fields")
 
         self.data = problem_data
-        self.question_id: int = problem_data['questionId']
+        self.question_id: int = problem_data['questionFrontendId']
         self.title: str = problem_data['title']
         self.difficulty: str = problem_data['difficulty']
         self.content: str = problem_data['content']

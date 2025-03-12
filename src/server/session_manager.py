@@ -1,12 +1,11 @@
 import json
-import os
 from pathlib import Path
 from typing import Optional, Dict
+import typer
 
 class SessionManager:
     def __init__(self):
-        # Create config directory in user's home directory
-        self.config_dir = Path.home() / '.leetcode-cli'
+        self.config_dir = Path(typer.get_app_dir("leetcode-cli"))
         self.config_file = self.config_dir / 'session.json'
         self._ensure_config_dir()
 

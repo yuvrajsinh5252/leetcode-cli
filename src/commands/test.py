@@ -2,24 +2,17 @@ import typer
 from pathlib import Path
 from ..server.auth import Auth
 from ..server.solution_manager import SolutionManager
+from ..server.config import LANGUAGE_MAP
+from ..lib.submission_ui import (
+    display_auth_error, display_file_not_found_error,
+    display_language_detection_error, display_submission_results, display_exception_error,
+    create_submission_progress, display_language_detection_message
+)
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
 
-map_lang = {
-    "py": "python3",
-    "java": "java",
-    "js": "javascript",
-    "ts": "typescript",
-    "c": "c",
-    "cpp": "cpp",
-    "cs": "csharp",
-    "go": "golang",
-    "rb": "ruby",
-    "swift": "swift",
-    "rs": "rust",
-    "php": "php"
-}
+FILE_EXT_TO_LANG = {ext.lstrip('.'): lang for ext, lang in LANGUAGE_MAP.items()}
 
 def test(
     problem: str = typer.Argument(..., help="Problem slug (e.g., 'two-sum')"),
@@ -27,43 +20,32 @@ def test(
 ):
     """Test a solution with LeetCode's test cases"""
     if not auth_manager.is_authenticated:
-        typer.echo(typer.style("❌ Please login first using the login command", fg=typer.colors.RED))
-        raise typer.Exit(1)
+        display_auth_error()
 
     if not file.exists():
-        typer.echo(typer.style(f"❌ File not found: {file}", fg=typer.colors.RED))
-        raise typer.Exit(1)
+        display_file_not_found_error(file)
 
     with open(file, 'r') as f:
         code = f.read()
 
-    lang = map_lang.get(file.suffix[1:])
+    file_ext = file.suffix[1:] if file.suffix else ""
+    lang = FILE_EXT_TO_LANG.get(file_ext)
     if not lang:
-        typer.echo(typer.style(f"❌ Unsupported file extension: {file.suffix}", fg=typer.colors.RED))
-        typer.echo(f"Supported extensions: {', '.join(map_lang.keys())}")
-        raise typer.Exit(1)
+        display_language_detection_error(file.suffix)
+        return
+
+    display_language_detection_message(lang)
 
     typer.echo(typer.style("🧪 Testing solution with LeetCode test cases...", fg=typer.colors.YELLOW))
-    try:
-        result = solution_manager.test_solution(problem, code, lang)
-    except Exception as e:
-        typer.echo(typer.style(f"❌ Error connecting to LeetCode: {str(e)}", fg=typer.colors.RED))
-        raise typer.Exit(1)
 
-    if result["success"]:
-        status_color = typer.colors.GREEN if result["status"] == "Accepted" else typer.colors.RED
-        status_prefix = "✨" if result['status'] == "Accepted" else "❌"
-        typer.echo(typer.style(f"\n{status_prefix} Status: {result['status']}", fg=status_color))
-        if "runtime" in result:
-            typer.echo(f"⏱️Runtime: {result['runtime']}")
-        if "memory" in result:
-            typer.echo(f"💾 Memory: {result['memory']}")
-        typer.echo("\nTest Case Results:\n")
-        typer.echo(f"📤 Your Output:\n{result['output']}")
-        typer.echo(f"✅ Expected:\n{result['expected']}")
-    else:
-        typer.echo(typer.style(f"\n❌ {result['status']}", fg=typer.colors.BRIGHT_RED))
-        error_message = f"\n{result['error']}"
-        if result.get('full_error'):
-            error_message += f"\n\nFull error:\n{result['full_error']}"
-        typer.echo(typer.style(error_message, fg=typer.colors.RED))
+    try:
+        with create_submission_progress() as progress:
+            test_task = progress.add_task("Testing...", total=1)
+            progress.update(test_task, advance=0.5)
+            result = solution_manager.test_solution(problem, code, lang)
+            progress.update(test_task, advance=0.5)
+
+        display_submission_results(result)
+
+    except Exception as e:
+        display_exception_error(e)

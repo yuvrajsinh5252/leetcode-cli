@@ -2,7 +2,7 @@ import typer
 
 from ..server.solution_manager import SolutionManager
 from ..server.auth import Auth
-from .test import map_lang
+from ..server.config import LANGUAGE_MAP
 
 solution_manager = SolutionManager(Auth().get_session())
 
@@ -26,7 +26,7 @@ def edit(
     filename = f"{filename_prefix}.{lang}"
     with open(filename, "w") as f:
       for snippet in question_data.get('codeSnippets', []):
-          if snippet.get('langSlug').lower() == map_lang.get(lang):
+          if snippet.get('langSlug').lower() == LANGUAGE_MAP.get(lang):
             f.write(snippet.get('code'))
             return
       typer.echo(f"No template found for language {lang}")

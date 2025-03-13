@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 from ..server.auth import Auth
 from ..server.solution_manager import SolutionManager
+from ..server.config import LANGUAGE_MAP
 from ..lib.submission_ui import (
     display_auth_error, display_file_not_found_error, display_language_detection_message,
     display_language_detection_error, display_problem_not_found_error, display_submission_details,
@@ -13,21 +14,6 @@ from ..lib.submission_ui import (
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
-
-LANGUAGE_MAP = {
-    '.py': 'python3',
-    '.cpp': 'cpp',
-    '.c': 'c',
-    '.java': 'java',
-    '.js': 'javascript',
-    '.ts': 'typescript',
-    '.go': 'golang',
-    '.rs': 'rust',
-    '.rb': 'ruby',
-    '.cs': 'csharp',
-    '.swift': 'swift',
-    '.php': 'php',
-}
 
 def submit(
     problem: str = typer.Argument(..., help="Problem slug or number (e.g., 'two-sum' or '1')"),

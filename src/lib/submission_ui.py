@@ -1,9 +1,7 @@
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.progress import Progress, BarColumn, TextColumn
 from rich import box
-from rich.text import Text
 from rich.columns import Columns
 import typer
 
@@ -37,7 +35,6 @@ def display_problem_not_found_error(problem):
 
 def display_submission_details(problem, problem_name, lang, file):
     """Display submission details and confirmation prompt using a clean layout"""
-    # Create formatted text lines instead of a nested table
     content = [
         f"[cyan]Problem:[/] {problem} - {problem_name}",
         f"[cyan]Language:[/] {lang}",
@@ -71,7 +68,6 @@ def display_submission_results(result):
     if result["success"]:
         status = result['status']
 
-        # Set colors based on status
         if status == "Accepted":
             status_style = "bold green"
             border_style = "green"
@@ -85,18 +81,26 @@ def display_submission_results(result):
             border_style = "red"
             emoji = "❌"
 
-        # Get metrics
         runtime = result.get('runtime', 'N/A')
         memory = result.get('memory', 'N/A')
+
+        memory_warning = result.get('memory_warning')
+        if memory_warning:
+            memory = f"{memory} [bold yellow](!)[/]"
+
         passed = result.get('passed_testcases', 0)
         total = result.get('total_testcases', 0)
         test_case_str = f"{passed}/{total} ({passed/total*100:.1f}%)" if total > 0 else "N/A"
 
         content = [
             f"[cyan]⏱️ Runtime:[/] {runtime}",
-            f"[cyan]💾 Memory:[/] {memory}",
-            f"[cyan]🧪 Test Cases:[/] {test_case_str}"
+            f"[cyan]💾 Memory:[/] {memory}"
         ]
+
+        if result.get('elapsed_time'):
+            content.append(f"[cyan]⏲️ Elapsed Time:[/] {result.get('elapsed_time')} ms")
+
+        content.append(f"[cyan]🧪 Test Cases:[/] {test_case_str}")
 
         title = f"{emoji} Submission Result: [{status_style}]{status}[/]"
         console.print(Panel(
@@ -106,9 +110,48 @@ def display_submission_results(result):
             box=box.ROUNDED
         ))
 
-        if status != "Accepted" and result.get('error_message'):
-            error_msg = result.get('error_message', 'No details available')
+        if memory_warning:
+            console.print(Panel(
+                memory_warning,
+                title="⚠️ Memory Usage Warning",
+                border_style="yellow",
+                box=box.ROUNDED
+            ))
+
+        if result.get('stdout'):
+            console.print(Panel(
+                result.get('stdout'),
+                title="📝 Standard Output",
+                border_style="blue",
+                box=box.ROUNDED
+            ))
+
+        if result.get('output') and result.get('expected'):
+            is_wrong_answer = status == "Wrong Answer"
+
+            output_panel = Panel(
+                result.get('output', ''),
+                title="Your Output",
+                border_style="red" if is_wrong_answer else "blue"
+            )
+            expected_panel = Panel(
+                result.get('expected', ''),
+                title="Expected Output",
+                border_style="green"
+            )
+            console.print(Columns([output_panel, expected_panel]))
+
+        if status != "Accepted" and result.get('error'):
+            error_msg = result.get('error', 'No details available')
             console.print(Panel(error_msg, title="Error Details", border_style="red"))
+
+            if result.get('full_error'):
+                console.print(Panel(
+                    result.get('full_error', ''),
+                    title="Full Error Trace",
+                    border_style="red",
+                    box=box.ROUNDED
+                ))
     else:
         error_panel = Panel(
             f"{result.get('error', 'Unknown error')}",
@@ -116,6 +159,22 @@ def display_submission_results(result):
             border_style="red"
         )
         console.print(error_panel)
+
+        if result.get('stdout'):
+            console.print(Panel(
+                result.get('stdout'),
+                title="📝 Standard Output",
+                border_style="blue",
+                box=box.ROUNDED
+            ))
+
+        if result.get('full_error'):
+            console.print(Panel(
+                result.get('full_error', ''),
+                title="Full Error Trace",
+                border_style="red",
+                box=box.ROUNDED
+            ))
 
 def display_exception_error(e):
     """Display exception error message"""

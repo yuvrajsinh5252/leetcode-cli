@@ -2,3 +2,4 @@ TODO.md
 __pycache__
 .venv
 leetcode_cli.egg-info
+*.cpp

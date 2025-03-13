@@ -6,7 +6,7 @@ STATUS_CODES = {
     15: "Runtime Error",
     16: "Memory Limit Exceeded",
     20: "Compile Error",
-    30: "Wrong Answer"
+    11: "Wrong Answer"
 }
 LANGUAGE_MAP = {
     '.py': 'python3',

@@ -61,12 +61,10 @@ def submit(
             return
 
         with create_submission_progress() as progress:
-            submit_task = progress.add_task("Submitting...", total=1)
-            progress.update(submit_task, advance=0.5)
+            progress.add_task("Submitting...", total=1)
             result = solution_manager.submit_solution(problem, code, lang)
-            progress.update(submit_task, advance=0.5)
 
-        display_submission_results(result)
+        display_submission_results(result, is_test=False)
 
     except Exception as e:
         display_exception_error(e)

@@ -36,16 +36,12 @@ def test(
 
     display_language_detection_message(lang)
 
-    typer.echo(typer.style("🧪 Testing solution with LeetCode test cases...", fg=typer.colors.YELLOW))
-
     try:
         with create_submission_progress() as progress:
-            test_task = progress.add_task("Testing...", total=1)
-            progress.update(test_task, advance=0.5)
+            progress.add_task("Testing...", total=1)
             result = solution_manager.test_solution(problem, code, lang)
-            progress.update(test_task, advance=0.5)
 
-        display_submission_results(result)
+        display_submission_results(result, is_test=True)
 
     except Exception as e:
         display_exception_error(e)

@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional, List, Union
 import time
-from ..server.config import LEETCODE_BASE_URL, STATUS_CODES, MEMORY_WARNING_THRESHOLD, MEMORY_LIMIT_THRESHOLD, TEST_RESULT_TIMEOUT, SUBMISSION_RESULT_TIMEOUT
+from ..server.config import LEETCODE_BASE_URL, TEST_RESULT_TIMEOUT, SUBMISSION_RESULT_TIMEOUT
 
 class SolutionManager:
     def __init__(self, session):
@@ -108,98 +108,7 @@ class SolutionManager:
             return output.strip('[]"')
         return str(output)
 
-    def _process_submission_result(self, result: Dict[str, Any], is_test: bool = False) -> Dict[str, Any]:
-        """Process submission/test results and return standardized output"""
-        status_code_val = result.get('status_code')
-
-        stdout = result.get('std_output_list', [])
-        formatted_stdout = self._format_output(stdout) if stdout and any(stdout) else None
-
-        if not result.get('run_success', True):
-            if status_code_val == 20:
-                return {
-                    "success": False,
-                    "status": "Compilation Error",
-                    "error": result.get('compile_error', 'Unknown compilation error'),
-                    "full_error": result.get('full_compile_error', ''),
-                    "stdout": formatted_stdout
-                }
-            if status_code_val == 14:
-                return {
-                    "success": False,
-                    "status": "Time Limit Exceeded",
-                    "error": "Your code took too long to execute",
-                    "runtime": result.get('status_runtime', 'N/A'),
-                    "elapsed_time": result.get('elapsed_time', 'N/A'),
-                    "stdout": formatted_stdout
-                }
-            if status_code_val == 15:
-                return {
-                    "success": False,
-                    "status": "Runtime Error",
-                    "error": result.get('runtime_error', 'Unknown runtime error'),
-                    "full_error": result.get('full_runtime_error', ''),
-                    "stdout": formatted_stdout
-                }
-            return {
-                "success": False,
-                "status": result.get('status_msg', 'Error'),
-                "error": result.get('runtime_error', 'Unknown error'),
-                "full_error": result.get('full_runtime_error', ''),
-                "stdout": formatted_stdout
-            }
-
-        memory_usage = result.get('memory', 0)
-        memory_str = result.get('status_memory', f"{memory_usage/1000000:.1f} MB" if memory_usage else 'N/A')
-
-        memory_warning = None
-        memory_limit_exceeded = False
-
-        if memory_usage and memory_usage > MEMORY_LIMIT_THRESHOLD:
-            memory_limit_exceeded = True
-            memory_warning = "Memory Limit Exceeded: Your solution is using too much memory"
-        elif memory_usage and memory_usage > MEMORY_WARNING_THRESHOLD:
-            memory_warning = "Warning: High memory usage detected"
-
-        if memory_limit_exceeded:
-            return {
-                "success": False,
-                "status": "Memory Limit Exceeded",
-                "error": "Your solution is using too much memory",
-                "memory": memory_str,
-                "memory_warning": memory_warning,
-                "stdout": formatted_stdout
-            }
-
-        code_answers = result.get('code_answer', [])
-        expected_answers = result.get('expected_code_answer', [])
-
-        is_correct = True
-        if expected_answers and (not is_test or result.get('correct_answer') is False):
-            is_correct = False
-
-        response = {
-            "success": True,
-            "status": "Accepted" if is_correct else "Wrong Answer",
-            "runtime": result.get('status_runtime', result.get('runtime', 'N/A')),
-            "memory": memory_str,
-            "memory_warning": memory_warning,
-            "total_testcases": result.get('total_testcases', 0),
-            "passed_testcases": result.get('total_correct', 0),
-            "stdout": formatted_stdout
-        }
-
-        if code_answers or expected_answers:
-            response.update({
-                "output": self._format_output(code_answers),
-                "expected": self._format_output(expected_answers),
-                "total_correct": sum(1 for a, b in zip(code_answers, expected_answers)
-                                    if str(a).strip() == str(b).strip()) if code_answers and expected_answers else 0
-            })
-
-        return response
-
-    def _get_result_with_polling(self, submission_id: str, timeout: int, is_test: bool = False) -> Dict[str, Any]:
+    def _get_result_with_polling(self, submission_id: str, timeout: int, is_test: bool = False) ->  Dict[str, Any]:
         """Poll for results with timeout"""
         url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
 
@@ -213,7 +122,7 @@ class SolutionManager:
 
                 result = response.json()
                 if result.get('state') == 'SUCCESS':
-                    return self._process_submission_result(result, is_test=is_test)
+                    return result
             except Exception as e:
                 continue
 

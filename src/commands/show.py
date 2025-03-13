@@ -3,6 +3,7 @@ import os
 from ..lib.problem_ui import ProblemDetails
 from ..server.auth import Auth
 from ..server.solution_manager import SolutionManager
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
@@ -24,7 +25,14 @@ def show(
         raise typer.Exit(1)
 
     try:
-        data = solution_manager.get_question_data(problem)
+        with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                transient=True
+            ) as progress:
+            progress.add_task("Fetching problem data...", total=1)
+            data = solution_manager.get_question_data(problem)
+
         if not data.get('data', {}).get('question'):
             typer.echo(typer.style(f"❌ Problem '{problem}' not found", fg=typer.colors.RED))
             raise typer.Exit(1)

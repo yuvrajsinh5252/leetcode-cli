@@ -4,6 +4,7 @@ from rich.live import Live
 from typing import Optional
 from ..lib.ui import display_problem_list
 from ..server.auth import Auth
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 import typer
 
@@ -31,8 +32,12 @@ def list_problems(
 
   tags = tag.split(',') if tag else []
 
-  with Live(Spinner('dots'), refresh_per_second=10) as live:
-    live.console.print("[cyan]Fetching problems...")
+  with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+    progress.add_task("Fetching problems...", total=1)
 
     session = AuthManager.session_manager.load_session()
     if not session:

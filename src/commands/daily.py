@@ -25,11 +25,12 @@ def daily(
         result = get_daily_question()
         question = result['data']['activeDailyCodingChallengeQuestion']
         typer.echo("\r" + " " * 30 + "\r", nl=False)
+
+        show(problem=question['question']['titleSlug'], save=save)
     except Exception as e:
         typer.echo("\n" + typer.style(f"❌ Failed to fetch daily question: {str(e)}", fg=typer.colors.RED))
         raise typer.Exit(1)
 
-    show(problem=question['question']['titleSlug'], save=save)
 
     if not no_editor and editor:
         try:

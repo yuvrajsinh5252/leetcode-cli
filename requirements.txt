@@ -3,3 +3,4 @@ requests
 gql[all]
 bs4
 setuptools
+markdownify

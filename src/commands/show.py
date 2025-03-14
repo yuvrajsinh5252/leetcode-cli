@@ -46,7 +46,8 @@ def show(
         if compact:
             problem_details.display()
         else:
-            problem_details.display_full()
+            problem_details.display()
+            # problem_details.display_full()
 
     except Exception as e:
         typer.echo(typer.style(f"❌ Error: {str(e)}", fg=typer.colors.RED))

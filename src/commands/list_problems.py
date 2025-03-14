@@ -3,7 +3,7 @@ from typing import Optional
 import typer
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..lib.ui import display_problem_list
+from ..lib.profile_ui import display_problem_list
 from ..server.api import fetch_problem_list
 from ..server.auth import Auth
 

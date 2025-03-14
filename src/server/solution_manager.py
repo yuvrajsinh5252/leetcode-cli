@@ -115,6 +115,98 @@ class SolutionManager:
         except Exception as e:
             return {"error": str(e)}
 
+    def get_problem_solutions(
+        self, question_identifier: str, best: bool
+    ) -> Dict[str, Any]:
+        """Get problem solutions using GraphQL
+        Args:
+            question_identifier: Can be either title slug (e.g. 'two-sum') or question number (e.g. '1')
+        """
+
+        try:
+            title_slug = self._resolve_question_slug(question_identifier)
+        except ValueError as e:
+            return {"error": str(e)}
+
+        query = """
+            query ugcArticleSolutionArticles(
+                $questionSlug: String!,
+                $orderBy: ArticleOrderByEnum,
+                $userInput: String,
+                $tagSlugs: [String!],
+                $skip: Int,
+                $before: String,
+                $after: String,
+                $first: Int,
+                $last: Int,
+                $isMine: Boolean
+            ) {
+                ugcArticleSolutionArticles(
+                    questionSlug: $questionSlug
+                    orderBy: $orderBy
+                    userInput: $userInput
+                    tagSlugs: $tagSlugs
+                    skip: $skip
+                    first: $first
+                    before: $before
+                    after: $after
+                    last: $last
+                    isMine: $isMine
+                ) {
+                    totalNum
+                    edges {
+                        node {
+                            title
+                            slug
+                            summary
+                            author {
+                                realName
+                                userSlug
+                                userName
+                            }
+                            articleType
+                            summary
+                            createdAt
+                            updatedAt
+                            topicId
+                            hitCount
+                            reactions {
+                                count
+                                reactionType
+                            }
+                            tags {
+                                name
+                                slug
+                                tagType
+                            }
+                        }
+                    }
+                }
+            }
+        """
+
+        variables = {
+            "questionSlug": title_slug,
+            "orderBy": "HOT",
+            "userInput": "",
+            "tagSlugs": [],
+            "skip": 0,
+            "first": 15,
+        }
+
+        try:
+            response = self.session.post(
+                f"{self.BASE_URL}/graphql",
+                json={"query": query, "variables": variables},
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Request failed with status {response.status_code}")
+
+            return response.json()
+        except Exception as e:
+            raise e
+
     def _format_output(self, output: Union[str, List, None]) -> str:
         """Format output that could be string or list"""
         if output is None:

@@ -51,7 +51,7 @@ class ProblemDetails:
         md = re.sub(r'\*\*Input:\*\*', r'**Input:** ', md)
         md = re.sub(r'\*\*Output:\*\*', r'**Output:** ', md)
         md = re.sub(r'\*\*Explanation:\*\*', r'**Explanation:** ', md)
-        md = re.sub(r'\n{3,}', '\n\n', md)
+        md = re.sub(r'\n{2,}', '\n\n', md)
         return md
 
     def _format_stats(self) -> str:
@@ -61,9 +61,9 @@ class ProblemDetails:
             'Total Submissions': self.stats.get('totalSubmission', 'N/A')
         }
 
-        formatted = [f"[{COLORS['section_title']}]Problem Statistics[/]"]
+        formatted = [f"● [{COLORS['section_title']}]Problem Statistics:[/]"]
         for label, value in stats.items():
-            formatted.append(f"[{COLORS['stats_label']}]{label}:[/] {value}")
+            formatted.append(f"  - [{COLORS['stats_label']}]{label}:[/] {value}")
 
         return "\n".join(formatted)
 
@@ -81,13 +81,13 @@ class ProblemDetails:
         if not topic_names:
             return ""
 
-        return f"[{COLORS['section_title']}]Topics:[/] {', '.join(topic_names)}"
+        return f"● [{COLORS['section_title']}]Topics:[/] {', '.join(topic_names)}"
 
     def _format_similar_questions(self) -> str:
         if not self.similar_questions:
             return ""
 
-        lines = [f"[{COLORS['section_title']}]Similar Questions:[/]"]
+        lines = [f"● [{COLORS['section_title']}]Similar Questions:[/]"]
         for q in self.similar_questions[:5]:
             title = q.get('title', '')
             difficulty = q.get('difficulty', '')
@@ -102,7 +102,7 @@ class ProblemDetails:
                 else:
                     title_display = title
 
-                question_line = f"- [{COLORS['problem_number']}]#{question_id}[/] {title_display} {lock_symbol} ([{diff_color}]{difficulty}[/{diff_color}])"
+                question_line = f"  - [{COLORS['problem_number']}]#{question_id}[/] {title_display} {lock_symbol} ([{diff_color}]{difficulty}[/{diff_color}])"
                 lines.append(question_line)
 
         if len(lines) <= 1:

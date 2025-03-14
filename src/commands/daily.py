@@ -5,6 +5,7 @@ from ..server.api import get_daily_question
 def daily(
     lang: str = typer.Argument("py", help="Programming language to use."),
     editor: str = typer.Option("vim", '--editor', '-e', help="Code editor to use."),
+    full: bool = typer.Option(False, "--full", "-f", help="Show full problem description"),
     save: bool = typer.Option(False, "--save", "-s", help="Save problem description to a file"),
     no_editor: bool = typer.Option(False, "--no-editor", help="Skip opening editor"),
 ):
@@ -26,7 +27,7 @@ def daily(
         question = result['data']['activeDailyCodingChallengeQuestion']
         typer.echo("\r" + " " * 30 + "\r", nl=False)
 
-        show(problem=question['question']['titleSlug'], save=save)
+        show(problem=question['question']['titleSlug'], save=save, compact=not full)
     except Exception as e:
         typer.echo("\n" + typer.style(f"❌ Failed to fetch daily question: {str(e)}", fg=typer.colors.RED))
         raise typer.Exit(1)

@@ -2,6 +2,7 @@ from typing import Any, Dict
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from ..server.config import STATUS_CODES
 from rich import box
 from rich.columns import Columns
 import typer
@@ -54,7 +55,6 @@ def display_submission_details(problem, problem_name, lang, file):
 def display_submission_canceled():
     """Display submission canceled message"""
     console.print("[yellow]Submission canceled[/]")
-    raise typer.Exit(0)
 
 def create_submission_progress():
     """Create and return a submission progress context"""
@@ -67,41 +67,59 @@ def create_submission_progress():
 def display_submission_results(result: Dict[str, Any], is_test: bool = False):
     """Display submission results with a cleaner layout"""
     status_code = result.get('status_code')
-    status = result.get('status', result.get('status_msg', 'Unknown'))
+
+    # Use status code mapping if available
+    if status_code in STATUS_CODES:
+        status = STATUS_CODES[status_code]
+    else:
+        status = result.get('status', result.get('status_msg', 'Unknown'))
+
     run_success = result.get('run_success', result.get('success', False))
 
-    if status == "Accepted" and run_success:
+    # Determine status style and emoji
+    if status_code == 10 or status == "Accepted" and run_success:
         status_style = "bold green"
         border_style = "green"
         emoji = "✅"
-    elif status in ["Runtime Error", "Time Limit Exceeded"] or status_code in [14, 15]:
+    elif status_code in [14, 15] or status in ["Runtime Error", "Time Limit Exceeded"]:
         status_style = "bold yellow"
         border_style = "yellow"
         emoji = "⚠️"
-    elif status == "Compile Error" or status_code == 20:
+    elif status_code in [12, 13]:  # Memory Limit Exceeded, Output Limit Exceeded
+        status_style = "bold yellow"
+        border_style = "yellow"
+        emoji = "⚠️"
+    elif status_code == 20 or status == "Compile Error":
         status_style = "bold red"
         border_style = "red"
         emoji = "❌"
+    elif status_code == 11:  # Wrong Answer
+        status_style = "bold red"
+        border_style = "red"
+        emoji = "❌"
+    elif status_code in [16, 30]:  # Internal Error, Timeout
+        status_style = "bold red"
+        border_style = "red"
+        emoji = "⚠️"
     else:
         status_style = "bold red"
         border_style = "red"
         emoji = "❌"
 
+    # Format runtime and memory metrics
     runtime = result.get('status_runtime', result.get('runtime', 'N/A'))
     memory = result.get('status_memory', result.get('memory', 'N/A'))
 
     if isinstance(memory, int):
-        memory = f"{memory / 1000000:.1f} MB"
+        memory = f"{memory / 1000000:.2f} MB"
 
     memory_warning = None
     if isinstance(result.get('memory'), int):
         memory_value = result.get('memory', 0)
         if memory_value > 200000000:
-            memory_warning = f"Your solution is using a large amount of memory ({memory_value/1000000:.1f} MB). Consider optimizing to reduce memory usage."
+            memory_warning = f"Your solution is using a large amount of memory ({memory_value/1000000:.2f} MB). Consider optimizing to reduce memory usage."
 
-    if memory_warning:
-        memory = f"{memory} [bold yellow](!)[/]"
-
+    # Calculate test case statistics
     passed = result.get('total_correct', 0)
     total = result.get('total_testcases', 0)
 
@@ -109,47 +127,60 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
     if total and total > 0:
         percentage = (passed / total) * 100
         test_case_str = f"{passed}/{total} ({percentage:.1f}%)"
+        if percentage == 100:
+            test_case_str = f"[bold green]{test_case_str}[/]"
+        elif percentage >= 80:
+            test_case_str = f"[bold yellow]{test_case_str}[/]"
+        else:
+            test_case_str = f"[bold red]{test_case_str}[/]"
 
-    content_parts = []
-    content_parts.append(f"[cyan]⏱️ Runtime:[/] {runtime}")
-    content_parts.append(f"[cyan]💾 Memory:[/] {memory}")
+    content_parts = [
+        f"📊 [bold cyan]Status:[/] [{status_style}]{status}[/]\n",
+        f"[bold cyan]🕒 Runtime:[/] {runtime}",
+        f"[bold cyan]📝 Memory:[/] {memory}" + (" [bold yellow](!)[/]" if memory_warning else ""),
+    ]
 
     if result.get('elapsed_time'):
-        content_parts.append(f"[cyan]⏲️ Elapsed Time:[/] {result.get('elapsed_time')} ms")
+        content_parts.append(f"⌛ [bold cyan]Time:[/] {result.get('elapsed_time')} ms")
 
-    content_parts.append(f"[cyan]🧪 Test Cases:[/] {test_case_str}")
+    content_parts.append(f"🧪 [bold cyan]Tests:[/] {test_case_str}")
+
+    if status == "Accepted" and run_success:
+        if "beats" in str(runtime).lower() or "percentile" in str(runtime).lower():
+            content_parts.append(f"[bold green]🚀 Great performance![/]")
+
     content_string = "\n".join(content_parts)
 
-    title = f"{emoji} {'Test' if is_test else 'Submission'} Result: [{status_style}]{status}[/]"
+    title = f"{emoji} {'Test' if is_test else 'Submission'} Result"
     console.print(Panel(
         content_string,
         title=title,
+        title_align="center",
         border_style=border_style,
         box=box.ROUNDED,
-        padding=(0, 10)
+        padding=(1, 2)
     ))
 
-    # Display specific error messages
     if status == "Compile Error" or status_code == 20:
         error_msg = result.get('compile_error', result.get('error', 'No details available'))
         full_error = result.get('full_compile_error', result.get('full_error', ''))
 
         if error_msg:
             console.print(Panel(
-                error_msg,
-                title="Compilation Error",
+                f"[red]{error_msg}[/]",
+                title="⛔ Compilation Error",
                 border_style="red",
                 box=box.ROUNDED,
-                padding=(0, 1)
+                padding=(1, 1)
             ))
 
-        if full_error:
+        if full_error and full_error != error_msg:
             console.print(Panel(
-                full_error,
+                f"[dim]{full_error}[/]",
                 title="Full Compilation Error",
                 border_style="red",
                 box=box.ROUNDED,
-                padding=(0, 1)
+                padding=(1, 1)
             ))
 
     elif status == "Runtime Error" or status_code == 15:
@@ -158,30 +189,29 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
 
         if error_msg:
             console.print(Panel(
-                error_msg,
-                title="Runtime Error",
+                f"[yellow]{error_msg}[/]",
+                title="⚠️ Runtime Error",
                 border_style="yellow",
                 box=box.ROUNDED,
-                padding=(0, 1)
+                padding=(1, 1)
             ))
 
-        if full_error:
+        if full_error and full_error != error_msg:
             console.print(Panel(
-                full_error,
+                f"[dim]{full_error}[/]",
                 title="Full Error Trace",
                 border_style="yellow",
                 box=box.ROUNDED,
-                padding=(0, 1)
+                padding=(1, 1)
             ))
 
-    # Display memory warning if present
     if memory_warning:
         console.print(Panel(
-            memory_warning,
+            f"[yellow]{memory_warning}[/]",
             title="⚠️ Memory Usage Warning",
             border_style="yellow",
             box=box.ROUNDED,
-            padding=(0, 1)
+            padding=(1, 1)
         ))
 
     stdout_lines = []
@@ -203,7 +233,7 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
             title="📝 Standard Output",
             border_style="blue",
             box=box.ROUNDED,
-            padding=(0, 1)
+            padding=(1, 1)
         ))
     elif result.get('stdout') and result.get('stdout', '').strip():
         console.print(Panel(
@@ -211,7 +241,7 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
             title="📝 Standard Output",
             border_style="blue",
             box=box.ROUNDED,
-            padding=(0, 1)
+            padding=(1, 1)
         ))
 
     if result.get('code_answer') and result.get('expected_code_answer'):
@@ -222,57 +252,77 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
             output = "\n".join(output_lines)
             expected = "\n".join(expected_lines)
 
-            is_wrong_answer = status == "Wrong Answer" or (not run_success and not (status in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]))
+            is_wrong_answer = status == "Wrong Answer" or (not run_success and
+                             not (status in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]))
 
             output_panel = Panel(
                 output,
-                title="Your Output",
+                title="🔍 Your Output",
                 border_style="red" if is_wrong_answer else "blue",
-                padding=(0, 1)
+                padding=(1, 1)
             )
             expected_panel = Panel(
                 expected,
-                title="Expected Output",
+                title="✓ Expected Output",
                 border_style="green",
-                padding=(0, 1)
+                padding=(1, 1)
             )
+
+            if is_wrong_answer:
+                console.print(Panel(
+                    "[bold red]Output does not match expected result[/]",
+                    title="❌ Wrong Answer",
+                    border_style="red",
+                    padding=(0, 1)
+                ))
+
             console.print(Columns([output_panel, expected_panel]))
+
     elif result.get('output') or result.get('expected'):
         output = (result.get('output', '') or '').strip()
         expected = (result.get('expected', '') or '').strip()
 
-        is_wrong_answer = status == "Wrong Answer" or (not run_success and not (status in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]))
+        is_wrong_answer = status == "Wrong Answer" or (not run_success and
+                         not (status in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]))
+
+        if is_wrong_answer:
+            console.print(Panel(
+                "[bold red]Output does not match expected result[/]",
+                title="❌ Wrong Answer",
+                border_style="red",
+                padding=(0, 1)
+            ))
 
         output_panel = Panel(
             output,
-            title="Your Output",
+            title="🔍 Your Output",
             border_style="red" if is_wrong_answer else "blue",
-            padding=(0, 1)
+            padding=(1, 1)
         )
         expected_panel = Panel(
             expected,
-            title="Expected Output",
+            title="✓ Expected Output",
             border_style="green",
-            padding=(0, 1)
+            padding=(1, 1)
         )
         console.print(Columns([output_panel, expected_panel]))
 
     if not run_success and status not in ["Compile Error", "Runtime Error"] and result.get('error'):
         error_msg = result.get('error', 'No details available')
         console.print(Panel(
-            error_msg,
-            title="Error Details",
+            f"[red]{error_msg}[/]",
+            title="⛔ Error Details",
             border_style="red",
-            padding=(0, 1)
+            padding=(1, 1)
         ))
 
-        if result.get('full_error'):
+        if result.get('full_error') and result.get('full_error') != error_msg:
             console.print(Panel(
-                result.get('full_error', ''),
+                f"[dim]{result.get('full_error', '')}[/]",
                 title="Full Error Trace",
                 border_style="red",
                 box=box.ROUNDED,
-                padding=(0, 1)
+                padding=(1, 1)
             ))
 
 def display_exception_error(e):

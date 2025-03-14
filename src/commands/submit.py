@@ -36,7 +36,7 @@ def submit(
     try:
         # Auto-detect language from file extension if not provided
         if not lang:
-            extension = os.path.splitext(file)[1].lower()
+            extension = os.path.splitext(file)[1].lower().replace(".", "")
             if extension in LANGUAGE_MAP:
                 lang = LANGUAGE_MAP[extension]
                 display_language_detection_message(lang)
@@ -55,6 +55,7 @@ def submit(
 
             if not display_submission_details(problem, problem_name, lang, file):
                 display_submission_canceled()
+                return
 
         if not lang:
             display_language_detection_error("")

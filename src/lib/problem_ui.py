@@ -36,8 +36,7 @@ class ProblemDetails:
         self.difficulty = problem_data['difficulty']
         self.stats = problem_data['stats']
         self.topics = problem_data.get('topicTags', [])
-        self.companies = problem_data.get('companyTagStats', {}).get('companies', []) if 'companyTagStats' in problem_data else []
-        self.similar_questions = json.loads(problem_data.get('similarQuestions', '[]'))
+        self.similar_questions = problem_data.get('similarQuestionList', [])
 
         if isinstance(self.stats, str):
             try:
@@ -92,16 +91,26 @@ class ProblemDetails:
         for q in self.similar_questions[:5]:
             title = q.get('title', '')
             difficulty = q.get('difficulty', '')
+            question_id = q.get('questionId', '') or q.get('titleSlug', '')
+            lock_symbol = " 🔒" if q.get('isPaidOnly', False) else ""
+            diff_color = COLORS['difficulty'].get(difficulty, 'white')
+
             if title and difficulty:
-                diff_color = COLORS['difficulty'].get(difficulty, 'white')
-                lines.append(f"- {title} ([{diff_color}]{difficulty}[/{diff_color}])")
+                if 'titleSlug' in q:
+                    slug = q.get('titleSlug')
+                    title_display = f"[link=https://leetcode.com/problems/{slug}/]{title}[/link]"
+                else:
+                    title_display = title
+
+                question_line = f"- [{COLORS['problem_number']}]#{question_id}[/] {title_display} {lock_symbol} ([{diff_color}]{difficulty}[/{diff_color}])"
+                lines.append(question_line)
 
         if len(lines) <= 1:
             return ""
 
         return "\n".join(lines)
 
-    def display(self):
+    def display_probelm(self):
         formatted_md = self._format_markdown(self.content)
 
         content_panel = Panel(
@@ -114,6 +123,7 @@ class ProblemDetails:
         )
         console.print(content_panel)
 
+    def display_stats(self):
         stats_panel = Panel(
             self._format_stats(),
             title=f"[{COLORS['section_title']}]Statistics[/]",
@@ -122,6 +132,8 @@ class ProblemDetails:
             padding=STYLES['panel_padding']
         )
         console.print(stats_panel)
+
+    def display_additional_info(self):
         info_content = []
 
         topics = self._format_topics()
@@ -143,18 +155,3 @@ class ProblemDetails:
                 padding=STYLES['panel_padding']
             )
             console.print(info_panel)
-
-    def display_full(self):
-        self.display()
-
-        if self.companies:
-            company_names = [company.get('name', '') for company in self.companies if 'name' in company]
-            if company_names:
-                companies_panel = Panel(
-                    Text(", ".join(company_names)),
-                    box=SIMPLE,
-                    title="Companies",
-                    border_style=COLORS['border'],
-                    padding=STYLES['panel_padding']
-                )
-                console.print(companies_panel)

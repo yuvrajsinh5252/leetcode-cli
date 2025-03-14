@@ -2,11 +2,14 @@ BASE_URL = "https://leetcode.com/graphql"
 LEETCODE_BASE_URL = "https://leetcode.com"
 STATUS_CODES = {
     10: "Accepted",
+    11: "Wrong Answer",
+    12: "Memory Limit Exceeded",
+    13: "Output Limit Exceeded",
     14: "Time Limit Exceeded",
     15: "Runtime Error",
-    16: "Memory Limit Exceeded",
+    16: "Internal Error",
     20: "Compile Error",
-    11: "Wrong Answer"
+    30: "Timeout"
 }
 LANGUAGE_MAP = {
     '.py': 'python3',

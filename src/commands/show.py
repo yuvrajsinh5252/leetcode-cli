@@ -35,7 +35,7 @@ def show(
 
         if not data.get('data', {}).get('question'):
             typer.echo(typer.style(f"❌ Problem '{problem}' not found", fg=typer.colors.RED))
-            raise typer.Exit(1)
+            raise typer.Exit(data.get('errors', ['Unknown error']))
 
         question = data.get('data', {}).get('question')
         problem_details = ProblemDetails(question)
@@ -43,11 +43,11 @@ def show(
         if save:
             _save_problem_to_file(question)
 
-        if compact:
-            problem_details.display()
-        else:
-            problem_details.display()
-            # problem_details.display_full()
+        problem_details.display_probelm()
+
+        if not compact:
+            problem_details.display_stats()
+            problem_details.display_additional_info()
 
     except Exception as e:
         typer.echo(typer.style(f"❌ Error: {str(e)}", fg=typer.colors.RED))

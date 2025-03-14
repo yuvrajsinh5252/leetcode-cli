@@ -73,6 +73,15 @@ class SolutionManager:
                     questionFrontendId
                     title
                     titleSlug
+                    topicTags {
+                        name
+                    }
+                    similarQuestionList {
+                        title
+                        titleSlug
+                        difficulty
+                        isPaidOnly
+                    }
                     content
                     difficulty
                     exampleTestcaseList
@@ -88,15 +97,18 @@ class SolutionManager:
             }
         """
 
-        response = self.session.post(
-            f"{self.BASE_URL}/graphql",
-            json={
-                "query": query,
-                "variables": {"titleSlug": title_slug}
-            }
-        )
+        try:
+            response = self.session.post(
+                f"{self.BASE_URL}/graphql",
+                json={
+                    "query": query,
+                    "variables": {"titleSlug": title_slug}
+                }
+            )
 
-        return response.json()
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
 
     def _format_output(self, output: Union[str, List, None]) -> str:
         """Format output that could be string or list"""

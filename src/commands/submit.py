@@ -1,25 +1,38 @@
-import typer
 import os
 from pathlib import Path
 from typing import Optional
-from ..server.auth import Auth
-from ..server.solution_manager import SolutionManager
-from ..server.config import LANGUAGE_MAP
+
+import typer
+
 from ..lib.submission_ui import (
-    display_auth_error, display_file_not_found_error, display_language_detection_message,
-    display_language_detection_error, display_problem_not_found_error, display_submission_details,
-    display_submission_canceled, create_submission_progress, display_submission_results,
-    display_exception_error
+    create_submission_progress,
+    display_auth_error,
+    display_exception_error,
+    display_file_not_found_error,
+    display_language_detection_error,
+    display_language_detection_message,
+    display_problem_not_found_error,
+    display_submission_canceled,
+    display_submission_details,
+    display_submission_results,
 )
+from ..server.auth import Auth
+from ..server.config import LANGUAGE_MAP
+from ..server.solution_manager import SolutionManager
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
 
+
 def submit(
-    problem: str = typer.Argument(..., help="Problem slug or number (e.g., 'two-sum' or '1')"),
+    problem: str = typer.Argument(
+        ..., help="Problem slug or number (e.g., 'two-sum' or '1')"
+    ),
     file: Path = typer.Argument(..., help="Path to solution file"),
-    lang: Optional[str] = typer.Option(None, help="Programming language (auto-detected if not specified)"),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt")
+    lang: Optional[str] = typer.Option(
+        None, help="Programming language (auto-detected if not specified)"
+    ),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
 ):
     """
     Submit a solution to LeetCode
@@ -43,12 +56,17 @@ def submit(
             else:
                 display_language_detection_error(extension)
 
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             code = f.read()
 
         # Confirm submission unless forced
         if not force:
-            problem_name = solution_manager.get_question_data(problem).get('data', {}).get('question', {}).get('title')
+            problem_name = (
+                solution_manager.get_question_data(problem)
+                .get("data", {})
+                .get("question", {})
+                .get("title")
+            )
 
             if not problem_name:
                 display_problem_not_found_error(problem)

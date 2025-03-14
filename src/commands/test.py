@@ -1,18 +1,25 @@
-import typer
 from pathlib import Path
-from ..server.auth import Auth
-from ..server.solution_manager import SolutionManager
-from ..server.config import LANGUAGE_MAP
+
+import typer
+
 from ..lib.submission_ui import (
-    display_auth_error, display_file_not_found_error,
-    display_language_detection_error, display_submission_results, display_exception_error,
-    create_submission_progress, display_language_detection_message
+    create_submission_progress,
+    display_auth_error,
+    display_exception_error,
+    display_file_not_found_error,
+    display_language_detection_error,
+    display_language_detection_message,
+    display_submission_results,
 )
+from ..server.auth import Auth
+from ..server.config import LANGUAGE_MAP
+from ..server.solution_manager import SolutionManager
 
 auth_manager = Auth()
 solution_manager = SolutionManager(auth_manager.get_session())
 
-FILE_EXT_TO_LANG = {ext.lstrip('.'): lang for ext, lang in LANGUAGE_MAP.items()}
+FILE_EXT_TO_LANG = {ext.lstrip("."): lang for ext, lang in LANGUAGE_MAP.items()}
+
 
 def test(
     problem: str = typer.Argument(..., help="Problem slug (e.g., 'two-sum')"),
@@ -25,7 +32,7 @@ def test(
     if not file.exists():
         display_file_not_found_error(file)
 
-    with open(file, 'r') as f:
+    with open(file, "r") as f:
         code = f.read()
 
     file_ext = file.suffix[1:] if file.suffix else ""

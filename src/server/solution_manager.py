@@ -1,6 +1,12 @@
-from typing import Dict, Any, Optional, List, Union
 import time
-from ..server.config import LEETCODE_BASE_URL, TEST_RESULT_TIMEOUT, SUBMISSION_RESULT_TIMEOUT
+from typing import Any, Dict, List, Optional, Union
+
+from ..server.config import (
+    LEETCODE_BASE_URL,
+    SUBMISSION_RESULT_TIMEOUT,
+    TEST_RESULT_TIMEOUT,
+)
+
 
 class SolutionManager:
     def __init__(self, session):
@@ -11,7 +17,7 @@ class SolutionManager:
     def _clean_session_cookies(self):
         """Clean up duplicate cookies"""
         seen_cookies = {}
-        if not hasattr(self.session, 'cookies'):
+        if not hasattr(self.session, "cookies"):
             return
 
         all_cookies = list(self.session.cookies)
@@ -25,9 +31,9 @@ class SolutionManager:
     def _get_csrf_token(self):
         """Get CSRF token from cookies"""
         for cookie in self.session.cookies:
-            if cookie.name == 'csrftoken':
+            if cookie.name == "csrftoken":
                 return cookie.value
-        return ''
+        return ""
 
     def _resolve_question_slug(self, question_identifier: str) -> str:
         """Convert question number to title slug if needed"""
@@ -36,24 +42,26 @@ class SolutionManager:
 
         response = self.session.get(f"{self.BASE_URL}/api/problems/all/")
         if response.status_code == 200:
-            problems = response.json().get('stat_status_pairs', [])
+            problems = response.json().get("stat_status_pairs", [])
             for problem in problems:
-                if str(problem['stat']['frontend_question_id']) == question_identifier:
-                    return problem['stat']['question__title_slug']
+                if str(problem["stat"]["frontend_question_id"]) == question_identifier:
+                    return problem["stat"]["question__title_slug"]
 
         raise ValueError(f"Question number {question_identifier} not found")
 
-    def _prepare_request_headers(self, title_slug: str, csrf_token: Optional[str] = None) -> Dict[str, str]:
+    def _prepare_request_headers(
+        self, title_slug: str, csrf_token: Optional[str] = None
+    ) -> Dict[str, str]:
         """Prepare common request headers"""
         if csrf_token is None:
             csrf_token = self._get_csrf_token()
 
         return {
-            'referer': f"{self.BASE_URL}/problems/{title_slug}/",
-            'content-type': 'application/json',
-            'x-csrftoken': csrf_token,
-            'x-requested-with': 'XMLHttpRequest',
-            'origin': self.BASE_URL
+            "referer": f"{self.BASE_URL}/problems/{title_slug}/",
+            "content-type": "application/json",
+            "x-csrftoken": csrf_token,
+            "x-requested-with": "XMLHttpRequest",
+            "origin": self.BASE_URL,
         }
 
     def get_question_data(self, question_identifier: str) -> Dict[str, Any]:
@@ -100,10 +108,7 @@ class SolutionManager:
         try:
             response = self.session.post(
                 f"{self.BASE_URL}/graphql",
-                json={
-                    "query": query,
-                    "variables": {"titleSlug": title_slug}
-                }
+                json={"query": query, "variables": {"titleSlug": title_slug}},
             )
 
             return response.json()
@@ -115,12 +120,14 @@ class SolutionManager:
         if output is None:
             return "No output"
         if isinstance(output, list):
-            return '\n'.join(str(item) for item in output)
+            return "\n".join(str(item) for item in output)
         if isinstance(output, str):
             return output.strip('[]"')
         return str(output)
 
-    def _get_result_with_polling(self, submission_id: str, timeout: int, is_test: bool = False) ->  Dict[str, Any]:
+    def _get_result_with_polling(
+        self, submission_id: str, timeout: int, is_test: bool = False
+    ) -> Dict[str, Any]:
         """Poll for results with timeout"""
         url = f"{self.BASE_URL}/submissions/detail/{submission_id}/check/"
 
@@ -133,14 +140,16 @@ class SolutionManager:
                     continue
 
                 result = response.json()
-                if result.get('state') == 'SUCCESS':
+                if result.get("state") == "SUCCESS":
                     return result
-            except Exception as e:
+            except Exception:
                 continue
 
         return {"success": False, "error": "Timeout waiting for results"}
 
-    def _prepare_solution(self, title_slug: str, code: str, lang: str) -> Dict[str, Any]:
+    def _prepare_solution(
+        self, title_slug: str, code: str, lang: str
+    ) -> Dict[str, Any]:
         """Common preparation for both test and submit operations"""
         try:
             try:
@@ -151,20 +160,22 @@ class SolutionManager:
             self._clean_session_cookies()
 
             problem = self.get_question_data(title_slug)
-            question_data = problem.get('data', {}).get('question')
+            question_data = problem.get("data", {}).get("question")
             if not question_data:
                 return {"success": False, "error": "Question data not found"}
 
             return {
                 "success": True,
                 "title_slug": title_slug,
-                "question_id": question_data['questionId'],
-                "test_cases": question_data.get('exampleTestcaseList', [])
+                "question_id": question_data["questionId"],
+                "test_cases": question_data.get("exampleTestcaseList", []),
             }
         except Exception as e:
             return {"success": False, "error": f"Error preparing solution: {str(e)}"}
 
-    def submit_solution(self, title_slug: str, code: str, lang: str = "python3") -> Dict[str, Any]:
+    def submit_solution(
+        self, title_slug: str, code: str, lang: str = "python3"
+    ) -> Dict[str, Any]:
         """Submit a solution to LeetCode"""
         try:
             prep_result = self._prepare_solution(title_slug, code, lang)
@@ -177,31 +188,37 @@ class SolutionManager:
             submit_url = f"{self.BASE_URL}/problems/{title_slug}/submit/"
             headers = self._prepare_request_headers(title_slug)
 
-            data = {
-                "lang": lang,
-                "question_id": question_id,
-                "typed_code": code
-            }
+            data = {"lang": lang, "question_id": question_id, "typed_code": code}
 
             response = self.session.post(submit_url, json=data, headers=headers)
 
             if response.status_code != 200:
-                return {"success": False, "error": f"Submission failed with status {response.status_code}"}
+                return {
+                    "success": False,
+                    "error": f"Submission failed with status {response.status_code}",
+                }
 
             try:
                 result_data = response.json()
-                submission_id = result_data.get('submission_id')
+                submission_id = result_data.get("submission_id")
                 if submission_id:
-                    return self._get_result_with_polling(submission_id, SUBMISSION_RESULT_TIMEOUT, is_test=False)
+                    return self._get_result_with_polling(
+                        submission_id, SUBMISSION_RESULT_TIMEOUT, is_test=False
+                    )
                 else:
                     return {"success": False, "error": "No submission ID received"}
             except ValueError as e:
-                return {"success": False, "error": f"Failed to parse response: {str(e)}"}
+                return {
+                    "success": False,
+                    "error": f"Failed to parse response: {str(e)}",
+                }
 
         except Exception as e:
             return {"success": False, "error": f"Submission error: {str(e)}"}
 
-    def test_solution(self, title_slug: str, code: str, lang: str = "python3", full: bool = False) -> Dict[str, Any]:
+    def test_solution(
+        self, title_slug: str, code: str, lang: str = "python3", full: bool = False
+    ) -> Dict[str, Any]:
         """Test a solution with LeetCode test cases"""
         try:
             prep_result = self._prepare_solution(title_slug, code, lang)
@@ -212,34 +229,44 @@ class SolutionManager:
             question_id = prep_result["question_id"]
             test_cases = prep_result["test_cases"]
 
-            endpoint = 'submit' if full else 'interpret_solution'
-            sid_key = 'submission_id' if full else 'interpret_id'
+            endpoint = "submit" if full else "interpret_solution"
+            sid_key = "submission_id" if full else "interpret_id"
             url = f"{self.BASE_URL}/problems/{title_slug}/{endpoint}/"
             headers = self._prepare_request_headers(title_slug)
 
             data = {
-                'lang': lang,
-                'question_id': str(question_id),
-                'typed_code': code,
-                'data_input': "\n".join(test_cases) if isinstance(test_cases, list) else test_cases,
-                'test_mode': False,
-                'judge_type': 'small'
+                "lang": lang,
+                "question_id": str(question_id),
+                "typed_code": code,
+                "data_input": "\n".join(test_cases)
+                if isinstance(test_cases, list)
+                else test_cases,
+                "test_mode": False,
+                "judge_type": "small",
             }
 
             response = self.session.post(url, json=data, headers=headers)
 
             if response.status_code != 200:
-                return {"success": False, "error": f"Request failed with status {response.status_code}"}
+                return {
+                    "success": False,
+                    "error": f"Request failed with status {response.status_code}",
+                }
 
             try:
                 result_data = response.json()
                 submission_id = result_data.get(sid_key)
                 if submission_id:
-                    return self._get_result_with_polling(submission_id, TEST_RESULT_TIMEOUT, is_test=True)
+                    return self._get_result_with_polling(
+                        submission_id, TEST_RESULT_TIMEOUT, is_test=True
+                    )
                 else:
                     return {"success": False, "error": "No submission ID received"}
             except ValueError as e:
-                return {"success": False, "error": f"Failed to parse response: {str(e)}"}
+                return {
+                    "success": False,
+                    "error": f"Failed to parse response: {str(e)}",
+                }
 
         except Exception as e:
             return {"success": False, "error": f"Test error: {str(e)}"}

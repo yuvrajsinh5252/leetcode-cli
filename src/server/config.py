@@ -9,23 +9,23 @@ STATUS_CODES = {
     15: "Runtime Error",
     16: "Internal Error",
     20: "Compile Error",
-    30: "Timeout"
+    30: "Timeout",
 }
 LANGUAGE_MAP = {
-    'py': 'python3',
-    'cpp': 'cpp',
-    'c': 'c',
-    'java': 'java',
-    'js': 'javascript',
-    'ts': 'typescript',
-    'go': 'golang',
-    'rs': 'rust',
-    'rb': 'ruby',
-    'cs': 'csharp',
-    'swift': 'swift',
-    'php': 'php',
+    "py": "python3",
+    "cpp": "cpp",
+    "c": "c",
+    "java": "java",
+    "js": "javascript",
+    "ts": "typescript",
+    "go": "golang",
+    "rs": "rust",
+    "rb": "ruby",
+    "cs": "csharp",
+    "swift": "swift",
+    "php": "php",
 }
 MEMORY_WARNING_THRESHOLD = 100000000  # 100MB
-MEMORY_LIMIT_THRESHOLD = 450000000    # 450MB
+MEMORY_LIMIT_THRESHOLD = 450000000  # 450MB
 TEST_RESULT_TIMEOUT = 30
 SUBMISSION_RESULT_TIMEOUT = 20

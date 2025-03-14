@@ -1,17 +1,24 @@
 import typer
+
 from ..server.auth import Auth
 
 auth_manager = Auth()
+
 
 def login():
     """Login to LeetCode"""
     if auth_manager.is_authenticated:
         saved_session = auth_manager.session_manager.load_session()
         if saved_session:
-            typer.echo(typer.style(f"Already logged in as {saved_session['user_name']}!", fg=typer.colors.GREEN))
+            typer.echo(
+                typer.style(
+                    f"Already logged in as {saved_session['user_name']}!",
+                    fg=typer.colors.GREEN,
+                )
+            )
             return
 
-    instruction = f"""
+    instruction = """
                     📝 To get your login tokens:
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     1️  Open LeetCode in your browser
@@ -28,19 +35,34 @@ def login():
         csrf_result = auth_manager.verify_csrf_token(csrf_token)
 
         if not csrf_result["success"]:
-            typer.echo(typer.style(f"\n✗ CSRF verification failed: {csrf_result['message']}", fg=typer.colors.RED))
+            typer.echo(
+                typer.style(
+                    f"\n✗ CSRF verification failed: {csrf_result['message']}",
+                    fg=typer.colors.RED,
+                )
+            )
             return
 
         leetcode_session = typer.prompt("Please enter your LEETCODE_SESSION token")
         result = auth_manager.login_with_session(csrf_token, leetcode_session)
 
         if result["success"]:
-            typer.echo(typer.style(f"\n✓ Successfully logged in as {result['user_name']}!", fg=typer.colors.GREEN))
+            typer.echo(
+                typer.style(
+                    f"\n✓ Successfully logged in as {result['user_name']}!",
+                    fg=typer.colors.GREEN,
+                )
+            )
             break
         else:
-            typer.echo(typer.style(f"\n✗ Login failed: {result['message']}", fg=typer.colors.RED))
+            typer.echo(
+                typer.style(
+                    f"\n✗ Login failed: {result['message']}", fg=typer.colors.RED
+                )
+            )
             if not typer.confirm("Do you want to try again?", abort=True):
                 break
+
 
 def logout():
     """Logout from LeetCode"""

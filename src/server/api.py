@@ -1,38 +1,42 @@
-from gql import gql, Client
-from gql.transport.requests import RequestsHTTPTransport
-from ..server.session_manager import SessionManager
 import requests
 import typer
+from gql import Client, gql
+from gql.transport.requests import RequestsHTTPTransport
+
+from ..server.session_manager import SessionManager
+
 
 def create_leetcode_client(csrf_token: str, session_id: str):
     headers = {
-        'Content-Type': 'application/json',
-        'x-csrftoken': csrf_token,
-        'cookie': f'csrftoken={csrf_token}; LEETCODE_SESSION={session_id}',
-        'referer': 'https://leetcode.com',
+        "Content-Type": "application/json",
+        "x-csrftoken": csrf_token,
+        "cookie": f"csrftoken={csrf_token}; LEETCODE_SESSION={session_id}",
+        "referer": "https://leetcode.com",
     }
 
     transport = RequestsHTTPTransport(
-        url='https://leetcode.com/graphql',
+        url="https://leetcode.com/graphql",
         headers=headers,
     )
 
-    return Client(
-        transport=transport,
-        fetch_schema_from_transport=False
-    )
+    return Client(transport=transport, fetch_schema_from_transport=False)
+
 
 def fetch_user_profile():
-  session = SessionManager().load_session()
-  username = session.get("user_name") if session else None
+    session = SessionManager().load_session()
+    username = session.get("user_name") if session else None
 
-  if not username:
-    typer.echo(typer.style("❌ Please login first using the login command", fg=typer.colors.RED))
-    raise typer.Exit(1)
+    if not username:
+        typer.echo(
+            typer.style(
+                "❌ Please login first using the login command", fg=typer.colors.RED
+            )
+        )
+        raise typer.Exit(1)
 
-  client = create_leetcode_client("csrf_token", "session_id")
-  queries = {
-    "userProfile": """
+    client = create_leetcode_client("csrf_token", "session_id")
+    queries = {
+        "userProfile": """
       query userPublicProfile($username: String!) {
         matchedUser(username: $username) {
           contestBadge { name expired hoverText icon }
@@ -47,7 +51,7 @@ def fetch_user_profile():
         }
       }
     """,
-    "languageStats": """
+        "languageStats": """
       query languageStats($username: String!) {
         matchedUser(username: $username) {
           languageProblemCount {
@@ -57,7 +61,7 @@ def fetch_user_profile():
         }
       }
     """,
-    "skillStats": """
+        "skillStats": """
       query skillStats($username: String!) {
         matchedUser(username: $username) {
           tagProblemCounts {
@@ -68,7 +72,7 @@ def fetch_user_profile():
         }
       }
     """,
-    "contestInfo": """
+        "contestInfo": """
       query userContestRankingInfo($username: String!) {
         userContestRanking(username: $username) {
           attendedContestsCount rating globalRanking
@@ -82,7 +86,7 @@ def fetch_user_profile():
         }
       }
     """,
-    "progress": """
+        "progress": """
       query userSessionProgress($username: String!) {
         allQuestionsCount { difficulty count }
         matchedUser(username: $username) {
@@ -93,7 +97,7 @@ def fetch_user_profile():
         }
       }
     """,
-    "calendar": """
+        "calendar": """
       query userProfileCalendar($username: String!, $year: Int) {
         matchedUser(username: $username) {
           userCalendar(year: $year) {
@@ -104,7 +108,7 @@ def fetch_user_profile():
         }
       }
     """,
-    "recentAcSubmissions": """
+        "recentAcSubmissions": """
       query recentAcSubmissions($username: String!, $limit: Int!) {
         recentAcSubmissionList(username: $username, limit: $limit) {
           id
@@ -113,21 +117,21 @@ def fetch_user_profile():
           timestamp
         }
       }
-    """
-  }
+    """,
+    }
 
-  results = {}
-  for name, query in queries.items():
-    try:
-      results[name] = client.execute(
-        gql(query),
-        variable_values={"username": username, "limit": 10}
-      )
-    except Exception as e:
-      print(f"Error fetching {name}: {str(e)}")
-      results[name] = None
+    results = {}
+    for name, query in queries.items():
+        try:
+            results[name] = client.execute(
+                gql(query), variable_values={"username": username, "limit": 10}
+            )
+        except Exception as e:
+            print(f"Error fetching {name}: {str(e)}")
+            results[name] = None
 
-  return results
+    return results
+
 
 def fetch_problem_list(
     csrf_token: str,
@@ -135,17 +139,17 @@ def fetch_problem_list(
     categorySlug: str,
     limit: int = 20,
     skip: int = 0,
-    filters: dict = {}
+    filters: dict = {},
 ):
-    if filters and 'difficulty' in filters and filters['difficulty']:
-        filters['difficulty'] = filters['difficulty'].upper()
+    if filters and "difficulty" in filters and filters["difficulty"]:
+        filters["difficulty"] = filters["difficulty"].upper()
 
     client = create_leetcode_client(csrf_token, session_id)
     variables = {
         "categorySlug": categorySlug,
         "limit": limit,
         "skip": skip,
-        "filters": filters
+        "filters": filters,
     }
 
     query = gql(
@@ -190,8 +194,8 @@ def fetch_problem_list(
 
 
 def get_daily_question():
-  url = "https://leetcode.com/graphql"
-  query = """
+    url = "https://leetcode.com/graphql"
+    query = """
   query questionOfToday {
     activeDailyCodingChallengeQuestion {
       date
@@ -219,5 +223,5 @@ def get_daily_question():
     }
   }
   """
-  response = requests.post(url, json={'query': query})
-  return response.json()
+    response = requests.post(url, json={"query": query})
+    return response.json()

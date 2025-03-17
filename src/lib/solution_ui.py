@@ -18,7 +18,7 @@ class SolutionUI:
         "Author": 18,
         "Date": 12,
         "Stats": 20,
-        "Tags": 25,
+        "Tags": 35,
     }
     MAX_TAGS = 4
     STYLES = {
@@ -68,7 +68,7 @@ class SolutionUI:
         up_formatted = self._format_number(upvotes)
         down_formatted = self._format_number(downvotes)
 
-        return f"[green]▲{up_formatted}[/green] [red]▼{down_formatted}[/red]"
+        return f"[green] ▲ {up_formatted}[/green] [red]▼ {down_formatted}[/red]"
 
     def _truncate_text(self, text, max_length):
         """Truncate text with ellipsis if longer than max_length"""
@@ -118,14 +118,14 @@ class SolutionUI:
             webbrowser.open(url)
 
     def show_solution(self):
+        console.print("\n")
+
         table = Table(
-            box=box.SIMPLE_HEAD,
-            expand=True,
-            border_style=self.STYLES["table_border"],
-            header_style="bold white on blue",
-            padding=(0, 1),
-            collapse_padding=False,
-            show_edge=False,
+            title=f"Solutions Found: {self.total_solutions}",
+            box=box.ROUNDED,
+            border_style="cyan",
+            pad_edge=False,
+            show_edge=True,
         )
 
         for column in self.COLUMNS:
@@ -134,11 +134,8 @@ class SolutionUI:
                 width=self.COLUMN_WIDTHS.get(column, None),
                 justify="left" if column != "#" else "right",
                 no_wrap=column not in ["Tags"],
+                style="bold" if column in ["Title", "#"] else None,
             )
-
-        console.print(
-            f"\n[bold cyan]Solutions Found: {self.total_solutions}[/bold cyan]\n"
-        )
 
         for i, solution in enumerate(self.solutions, 1):
             node = solution.get("node", {})
@@ -158,7 +155,7 @@ class SolutionUI:
             hit_count = node.get("hitCount", 0)
             hit_count_formatted = self._format_number(hit_count)
             reactions = self._format_reactions(node.get("reactions", []))
-            stats = f"[bold blue]👁️{hit_count_formatted}[/bold blue] {reactions}"
+            stats = f"[bold blue]{hit_count_formatted}[/bold blue] {reactions}"
 
             tags = self._format_tags(node.get("tags", []))
 
@@ -166,7 +163,7 @@ class SolutionUI:
 
         console.print(table)
         console.print(
-            "\n[dim italic]Click on solution titles to open them in your browser[/dim italic]"
+            "\n[dim italic]Click on solution titles to open them in your browser[/dim italic]\n"
         )
 
     def handle_solution_selection(self, index):

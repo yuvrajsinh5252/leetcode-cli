@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple
 
 import typer
 from rich import box
@@ -95,94 +95,22 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
     """Display submission results with a cleaner layout"""
     status_code = result.get("status_code")
 
-    # Use status code mapping if available
-    if status_code in STATUS_CODES:
-        status = STATUS_CODES[status_code]
-    else:
-        status = result.get("status", result.get("status_msg", "Unknown"))
+    # Determine status and success based on result type
+    status, run_success = _determine_status(result, is_test)
 
-    run_success = result.get("run_success", result.get("success", False))
+    # Get styling for the status display
+    status_style, border_style, emoji = _get_status_styling(
+        status, status_code, run_success, is_test, result
+    )
 
-    # Determine status style and emoji
-    if status_code == 10 or status == "Accepted" and run_success:
-        status_style = "bold green"
-        border_style = "green"
-        emoji = "✅"
-    elif status_code in [14, 15] or status in ["Runtime Error", "Time Limit Exceeded"]:
-        status_style = "bold yellow"
-        border_style = "yellow"
-        emoji = "⚠️"
-    elif status_code in [12, 13]:  # Memory Limit Exceeded, Output Limit Exceeded
-        status_style = "bold yellow"
-        border_style = "yellow"
-        emoji = "⚠️"
-    elif status_code == 20 or status == "Compile Error":
-        status_style = "bold red"
-        border_style = "red"
-        emoji = "❌"
-    elif status_code == 11:  # Wrong Answer
-        status_style = "bold red"
-        border_style = "red"
-        emoji = "❌"
-    elif status_code in [16, 30]:  # Internal Error, Timeout
-        status_style = "bold red"
-        border_style = "red"
-        emoji = "⚠️"
-    else:
-        status_style = "bold red"
-        border_style = "red"
-        emoji = "❌"
+    # Format metrics and build display content
+    content_parts = _build_content_parts(result, status, run_success, status_style)
 
-    # Format runtime and memory metrics
-    runtime = result.get("status_runtime", result.get("runtime", "N/A"))
-    memory = result.get("status_memory", result.get("memory", "N/A"))
-
-    if isinstance(memory, int):
-        memory = f"{memory / 1000000:.2f} MB"
-
-    memory_warning = None
-    if isinstance(result.get("memory"), int):
-        memory_value = result.get("memory", 0)
-        if memory_value > 200000000:
-            memory_warning = f"Your solution is using a large amount of memory ({memory_value / 1000000:.2f} MB). Consider optimizing to reduce memory usage."
-
-    # Calculate test case statistics
-    passed = result.get("total_correct", 0)
-    total = result.get("total_testcases", 0)
-
-    test_case_str = "N/A"
-    if total and total > 0:
-        percentage = (passed / total) * 100
-        test_case_str = f"{passed}/{total} ({percentage:.1f}%)"
-        if percentage == 100:
-            test_case_str = f"[bold green]{test_case_str}[/]"
-        elif percentage >= 80:
-            test_case_str = f"[bold yellow]{test_case_str}[/]"
-        else:
-            test_case_str = f"[bold red]{test_case_str}[/]"
-
-    content_parts = [
-        f"📊 [bold cyan]Status:[/] [{status_style}]{status}[/]\n",
-        f"[bold cyan]🕒 Runtime:[/] {runtime}",
-        f"[bold cyan]📝 Memory:[/] {memory}"
-        + (" [bold yellow](!)[/]" if memory_warning else ""),
-    ]
-
-    if result.get("elapsed_time"):
-        content_parts.append(f"⌛ [bold cyan]Time:[/] {result.get('elapsed_time')} ms")
-
-    content_parts.append(f"🧪 [bold cyan]Tests:[/] {test_case_str}")
-
-    if status == "Accepted" and run_success:
-        if "beats" in str(runtime).lower() or "percentile" in str(runtime).lower():
-            content_parts.append("[bold green]🚀 Great performance![/]")
-
-    content_string = "\n".join(content_parts)
-
+    # Display the main result panel
     title = f"{emoji} {'Test' if is_test else 'Submission'} Result"
     console.print(
         Panel(
-            content_string,
+            "\n".join(content_parts),
             title=title,
             title_align="center",
             border_style=border_style,
@@ -191,6 +119,123 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
         )
     )
 
+    # Display additional details based on status
+    _display_error_details(result, status, status_code)
+    _display_memory_warning(result)
+    _display_stdout(result)
+    _display_output_comparison(result, status, run_success)
+    _display_general_error(result, run_success, status)
+
+
+def _determine_status(result: Dict[str, Any], is_test: bool) -> Tuple[str, bool]:
+    """Determine status and success based on result type"""
+    if is_test:
+        correct_answer = result.get("correct_answer", None)
+        if correct_answer is False:
+            return "Wrong Answer", False
+
+        run_success = result.get("run_success", result.get("success", False))
+        if run_success:
+            return "Accepted", True
+        return result.get("status_msg", result.get("status", "Unknown")), run_success
+    else:
+        status_code = result.get("status_code")
+        if status_code in STATUS_CODES:
+            status = STATUS_CODES[status_code]
+        else:
+            status = result.get("status", result.get("status_msg", "Unknown"))
+        return status, result.get("run_success", result.get("success", False))
+
+
+def _get_status_styling(
+    status: str,
+    status_code: Optional[int],
+    run_success: bool,
+    is_test: bool,
+    result: Dict[str, Any],
+) -> Tuple[str, str, str]:
+    """Get the styling for status display"""
+    if is_test and result.get("correct_answer") is False:
+        return "bold red", "red", "❌"
+    elif (status_code == 10 or status == "Accepted") and run_success:
+        return "bold green", "green", "✅"
+    elif status_code in [14, 15] or status in ["Runtime Error", "Time Limit Exceeded"]:
+        return "bold yellow", "yellow", "⚠️"
+    elif status_code in [12, 13]:  # Memory/Output Limit Exceeded
+        return "bold yellow", "yellow", "⚠️"
+    elif status_code == 20 or status == "Compile Error":
+        return "bold red", "red", "❌"
+    elif status_code == 11:  # Wrong Answer
+        return "bold red", "red", "❌"
+    elif status_code in [16, 30]:  # Internal Error, Timeout
+        return "bold red", "red", "⚠️"
+    else:
+        return "bold red", "red", "❌"
+
+
+def _build_content_parts(
+    result: Dict[str, Any], status: str, run_success: bool, status_style: str
+) -> List[str]:
+    """Build content parts for the main display panel"""
+    # Format runtime and memory metrics
+    runtime = result.get("status_runtime", result.get("runtime", "N/A"))
+    memory = result.get("status_memory", result.get("memory", "N/A"))
+
+    if isinstance(memory, int):
+        memory = f"{memory / 1000000:.2f} MB"
+
+    memory_warning = None
+    memory_value = result.get("memory", 0)
+    if isinstance(memory_value, int) and memory_value > 200000000:
+        memory_warning = " [bold yellow](!)[/]"
+    else:
+        memory_warning = ""
+
+    # Build content parts
+    content_parts = [
+        f"📊 [bold cyan]Status:[/] [{status_style}]{status}[/]\n",
+        f"[bold cyan]🕒 Runtime:[/] {runtime}",
+        f"[bold cyan]📝 Memory:[/] {memory}{memory_warning}",
+    ]
+
+    if result.get("elapsed_time"):
+        content_parts.append(f"⌛ [bold cyan]Time:[/] {result.get('elapsed_time')} ms")
+
+    # Test case statistics
+    content_parts.append(f"🧪 [bold cyan]Tests:[/] {_format_test_case_stats(result)}")
+
+    # Performance indicator
+    if status == "Accepted" and run_success:
+        runtime_str = str(runtime).lower()
+        if "beats" in runtime_str or "percentile" in runtime_str:
+            content_parts.append("[bold green]🚀 Great performance![/]")
+
+    return content_parts
+
+
+def _format_test_case_stats(result: Dict[str, Any]) -> str:
+    """Format test case statistics"""
+    passed = result.get("total_correct", 0)
+    total = result.get("total_testcases", 0)
+
+    if not total:
+        return "N/A"
+
+    percentage = (passed / total) * 100
+    stats = f"{passed}/{total} ({percentage:.1f}%)"
+
+    if percentage == 100:
+        return f"[bold green]{stats}[/]"
+    elif percentage >= 80:
+        return f"[bold yellow]{stats}[/]"
+    else:
+        return f"[bold red]{stats}[/]"
+
+
+def _display_error_details(
+    result: Dict[str, Any], status: str, status_code: Optional[int]
+) -> None:
+    """Display error details based on status"""
     if status == "Compile Error" or status_code == 20:
         error_msg = result.get(
             "compile_error", result.get("error", "No details available")
@@ -247,10 +292,15 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
                 )
             )
 
-    if memory_warning:
+
+def _display_memory_warning(result: Dict[str, Any]) -> None:
+    """Display memory warning if needed"""
+    memory_value = result.get("memory", 0)
+    if isinstance(memory_value, int) and memory_value > 200000000:
+        warning = f"Your solution is using a large amount of memory ({memory_value / 1000000:.2f} MB). Consider optimizing to reduce memory usage."
         console.print(
             Panel(
-                f"[yellow]{memory_warning}[/]",
+                f"[yellow]{warning}[/]",
                 title="⚠️ Memory Usage Warning",
                 border_style="yellow",
                 box=box.ROUNDED,
@@ -258,7 +308,11 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
             )
         )
 
+
+def _display_stdout(result: Dict[str, Any]) -> None:
+    """Display standard output if available"""
     stdout_lines = []
+
     if result.get("std_output_list"):
         current_test_case = []
         for line in result.get("std_output_list", []):
@@ -292,6 +346,16 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
             )
         )
 
+
+def _display_output_comparison(
+    result: Dict[str, Any], status: str, run_success: bool
+) -> None:
+    """Display output comparison when available"""
+    is_wrong_answer = status == "Wrong Answer" or (
+        not run_success
+        and status not in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]
+    )
+
     if result.get("code_answer") and result.get("expected_code_answer"):
         output_lines = [
             line for line in result.get("code_answer", []) if line and line.strip()
@@ -305,12 +369,6 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
         if output_lines or expected_lines:
             output = "\n".join(output_lines)
             expected = "\n".join(expected_lines)
-
-            is_wrong_answer = status == "Wrong Answer" or (
-                not run_success
-                and status
-                not in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]
-            )
 
             output_panel = Panel(
                 output,
@@ -341,11 +399,6 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
         output = (result.get("output", "") or "").strip()
         expected = (result.get("expected", "") or "").strip()
 
-        is_wrong_answer = status == "Wrong Answer" or (
-            not run_success
-            and status not in ["Compile Error", "Runtime Error", "Time Limit Exceeded"]
-        )
-
         if is_wrong_answer:
             console.print(
                 Panel(
@@ -363,10 +416,18 @@ def display_submission_results(result: Dict[str, Any], is_test: bool = False):
             padding=(1, 1),
         )
         expected_panel = Panel(
-            expected, title="✓ Expected Output", border_style="green", padding=(1, 1)
+            expected,
+            title="✓ Expected Output",
+            border_style="green",
+            padding=(1, 1),
         )
         console.print(Columns([output_panel, expected_panel]))
 
+
+def _display_general_error(
+    result: Dict[str, Any], run_success: bool, status: str
+) -> None:
+    """Display general error information if needed"""
     if (
         not run_success
         and status not in ["Compile Error", "Runtime Error"]

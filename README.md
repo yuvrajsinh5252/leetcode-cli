@@ -37,7 +37,7 @@ pip install -e .
 | `lc profile`   | Display LeetCode profile  | -                                                                                                                                                                      |
 | `lc daily`     | Show today's challenge    | `{lang}` - Language (optional)<br>`-e/--editor` - Preferred editor<br>`-f/--full` - Show full description<br>`-s/--save` - Save to file<br>`--no-editor` - Skip editor |
 | `lc list`      | List available problems   | `-d/--difficulty` - Difficulty<br>`-s/--status` - Status<br>`-t/--tag` - Tag<br>`-c/--category-slug` - Category                                                        |
-| `lc show`      | Display problem details   | `{Problem Name/Number}`<br>`-s/--save` - Save to file<br>`-c/--compact` - Compact layout                                                                               |
+| `lc show`      | Display problem details   | `{Problem Name/Number}`<br>`-c/--compact` - Compact layout                                                                                                             |
 | `lc test`      | Test your solution        | `{Problem Name/Number} {FILE}`                                                                                                                                         |
 | `lc submit`    | Submit your solution      | `{Problem Name/Number} {FILE}`<br>`--lang` - Language<br>`-f/--force` - Skip confirmation                                                                              |
 | `lc edit`      | Edit solution in editor   | `{Problem Name/Number} {lang}`<br>`-e/--editor` - Preferred editor                                                                                                     |

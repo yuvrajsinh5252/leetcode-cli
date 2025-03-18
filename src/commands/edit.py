@@ -3,13 +3,6 @@ import subprocess
 
 import typer
 
-from ..server.auth import Auth
-from ..server.config import LANGUAGE_MAP
-from ..server.solution_manager import SolutionManager
-from .show import _save_problem_to_file
-
-solution_manager = SolutionManager(Auth().get_session())
-
 
 def edit(
     problem: str = typer.Argument(..., help="Problem name or id."),
@@ -19,6 +12,13 @@ def edit(
     ),
 ):
     """Solves a problem by passing lang param and open it with your code editor."""
+    from ..server.auth import Auth
+    from ..server.config import LANGUAGE_MAP
+    from ..server.solution_manager import SolutionManager
+    from .show import _save_problem_to_file
+
+    solution_manager = SolutionManager(Auth().get_session())
+
     question_data = (
         solution_manager.get_question_data(problem).get("data", {}).get("question")
     )

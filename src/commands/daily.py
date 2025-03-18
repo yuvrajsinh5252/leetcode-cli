@@ -1,8 +1,5 @@
 import typer
 
-from ..server.api import get_daily_question
-from .edit import edit
-
 
 def daily(
     lang: str = typer.Argument("py", help="Programming language to use."),
@@ -18,6 +15,8 @@ def daily(
     Fetches the daily coding challenge, displays problem details,
     and opens it in your preferred editor.
     """
+    from ..server.api import get_daily_question
+    from .edit import edit
     from .show import show
 
     if editor not in ["code", "vim", "nano"]:

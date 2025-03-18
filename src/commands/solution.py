@@ -1,13 +1,4 @@
 import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn
-
-from src.lib.solution_ui import SolutionUI
-
-from ..server.auth import Auth
-from ..server.solution_manager import SolutionManager
-
-auth = Auth()
-solution_manager = SolutionManager(auth.get_session())
 
 
 def solutions(
@@ -19,6 +10,16 @@ def solutions(
     ),
 ):
     """Fetch solution for a problem"""
+
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+
+    from src.lib.solution_ui import SolutionUI
+
+    from ..server.auth import Auth
+    from ..server.solution_manager import SolutionManager
+
+    auth = Auth()
+    solution_manager = SolutionManager(auth.get_session())
 
     try:
         with Progress(

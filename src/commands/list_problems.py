@@ -1,19 +1,12 @@
 from typing import Optional
 
 import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn
-
-from ..lib.profile_ui import display_problem_list
-from ..server.api import fetch_problem_list
-from ..server.auth import Auth
 
 status_map = {
     "attempted": "TRIED",
     "solved": "AC",
     "todo": "NOT_STARTED",
 }
-
-AuthManager = Auth()
 
 
 def list_problems(
@@ -31,6 +24,15 @@ def list_problems(
     ),
 ):
     """List available LeetCode problems with optional filters."""
+
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+
+    from ..lib.profile_ui import display_problem_list
+    from ..server.api import fetch_problem_list
+    from ..server.auth import Auth
+
+    AuthManager = Auth()
+
     if difficulty is not None or status is not None or tag is not None:
         if not AuthManager.is_authenticated:
             typer.echo(

@@ -1,12 +1,12 @@
 import typer
 
-from ..server.auth import Auth
-
-auth_manager = Auth()
-
 
 def login():
     """Login to LeetCode"""
+    from ..server.auth import Auth
+
+    auth_manager = Auth()
+
     if auth_manager.is_authenticated:
         saved_session = auth_manager.session_manager.load_session()
         if saved_session:
@@ -66,6 +66,11 @@ def login():
 
 def logout():
     """Logout from LeetCode"""
+
+    from ..server.auth import Auth
+
+    auth_manager = Auth()
+
     if not auth_manager.is_authenticated:
         typer.echo(typer.style("❌ You are not logged in", fg=typer.colors.RED))
         return

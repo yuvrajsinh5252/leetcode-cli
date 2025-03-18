@@ -1,14 +1,6 @@
 import os
 
 import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn
-
-from ..lib.problem_ui import ProblemDetails
-from ..server.auth import Auth
-from ..server.solution_manager import SolutionManager
-
-auth_manager = Auth()
-solution_manager = SolutionManager(auth_manager.get_session())
 
 
 def show(
@@ -28,6 +20,15 @@ def show(
     Fetches and displays the problem statement, examples, and metadata.
     Use --compact for a condensed view or --save to export to a file.
     """
+
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+
+    from ..lib.problem_ui import ProblemDetails
+    from ..server.auth import Auth
+    from ..server.solution_manager import SolutionManager
+
+    auth_manager = Auth()
+    solution_manager = SolutionManager(auth_manager.get_session())
 
     if not auth_manager.is_authenticated:
         typer.echo(

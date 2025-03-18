@@ -4,25 +4,6 @@ from typing import Optional
 
 import typer
 
-from ..lib.submission_ui import (
-    create_submission_progress,
-    display_auth_error,
-    display_exception_error,
-    display_file_not_found_error,
-    display_language_detection_error,
-    display_language_detection_message,
-    display_problem_not_found_error,
-    display_submission_canceled,
-    display_submission_details,
-    display_submission_results,
-)
-from ..server.auth import Auth
-from ..server.config import LANGUAGE_MAP
-from ..server.solution_manager import SolutionManager
-
-auth_manager = Auth()
-solution_manager = SolutionManager(auth_manager.get_session())
-
 
 def submit(
     problem: str = typer.Argument(
@@ -40,6 +21,26 @@ def submit(
     Uploads your solution file to LeetCode and returns the verdict.
     Language is auto-detected from file extension if not specified.
     """
+
+    from ..lib.submission_ui import (
+        create_submission_progress,
+        display_auth_error,
+        display_exception_error,
+        display_file_not_found_error,
+        display_language_detection_error,
+        display_language_detection_message,
+        display_problem_not_found_error,
+        display_submission_canceled,
+        display_submission_details,
+        display_submission_results,
+    )
+    from ..server.auth import Auth
+    from ..server.config import LANGUAGE_MAP
+    from ..server.solution_manager import SolutionManager
+
+    auth_manager = Auth()
+    solution_manager = SolutionManager(auth_manager.get_session())
+
     if not auth_manager.is_authenticated:
         display_auth_error()
 

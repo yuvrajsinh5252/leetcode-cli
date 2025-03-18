@@ -58,7 +58,5 @@ lc daily py -e vim
 
 #### Todo
 
-- [ ] Implement test case management
 - [ ] Add support for custom test cases
-- [ ] Improve error handling
 - [ ] Add solution templates

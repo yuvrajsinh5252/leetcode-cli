@@ -9,6 +9,7 @@ from src.commands.show import show
 from src.commands.solution import solutions
 from src.commands.submit import submit
 from src.commands.test import test
+from src.lib.welcome import display_welcome
 
 app = typer.Typer()
 
@@ -23,5 +24,18 @@ app.command(name="test")(test)
 app.command(name="edit")(edit)
 app.command(name="solutions")(solutions)
 
-if __name__ == "__main__":
+
+@app.callback(invoke_without_command=True)
+def callback(ctx: typer.Context):
+    """LeetCode CLI - A command-line tool for LeetCode problems."""
+    if ctx.invoked_subcommand is None:
+        display_welcome(app)
+        typer.echo(ctx.get_help())
+
+
+def main():
     app()
+
+
+if __name__ == "__main__":
+    main()

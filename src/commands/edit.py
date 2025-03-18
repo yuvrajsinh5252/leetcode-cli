@@ -31,7 +31,6 @@ def edit(
         problem if problem.isdigit() else question_data.get("questionId")
     )
 
-    # Save problem description using _save_problem_to_file function
     try:
         _save_problem_to_file(question_data)
     except Exception as e:
@@ -39,18 +38,41 @@ def edit(
 
     problem_title_slug = question_data.get("titleSlug", problem)
     markdown_file = f"{problem_title_slug}.md"
+    code_file_path = f"{filename_prefix}.{lang}"
 
     def create_file_with_template(lang: str):
-        filename = f"{filename_prefix}.{lang}"
-        with open(filename, "w") as f:
-            for snippet in question_data.get("codeSnippets", []):
-                if snippet.get("langSlug").lower() == LANGUAGE_MAP.get(lang):
-                    f.write(snippet.get("code"))
-                    return
-            typer.echo(f"No template found for language {lang}")
-        return filename
+        available_languages = {}
+        for snippet in question_data.get("codeSnippets", []):
+            available_languages[snippet.get("langSlug").lower()] = snippet.get("code")
 
-    code_file_path = f"{filename_prefix}.{lang}"
+        with open(code_file_path, "w") as f:
+            if lang.lower() in available_languages:
+                f.write(available_languages[lang.lower()])
+                return code_file_path
+
+            mapped_lang = LANGUAGE_MAP.get(lang.lower())
+            if mapped_lang and mapped_lang in available_languages:
+                f.write(available_languages[mapped_lang])
+                return code_file_path
+
+            reverse_map = {v: k for k, v in LANGUAGE_MAP.items()}
+            if (
+                lang.lower() in reverse_map
+                and reverse_map[lang.lower()] in available_languages
+            ):
+                f.write(available_languages[reverse_map[lang.lower()]])
+                return code_file_path
+
+            typer.echo(f"No template found for language {lang}.")
+            typer.echo(
+                "Available language templates: " + ", ".join(available_languages.keys())
+            )
+            typer.echo("Creating empty file.")
+
+        return code_file_path
+
+    if not os.path.exists(code_file_path):
+        code_file_path = create_file_with_template(lang)
 
     if not os.path.exists(markdown_file):
         typer.echo(f"Warning: Problem description file not found: {markdown_file}")
@@ -62,23 +84,23 @@ def edit(
         editor_name = os.path.basename(editor.split()[0]).lower()
 
         if editor_name in vim_like_editors:
-            subprocess.run([editor, "-O", code_file_path, markdown_file])
+            subprocess.run(
+                [editor, "-O", code_file_path, markdown_file, "-c", "set noswapfile"]
+            )
             typer.echo(
                 f"Tip: In {editor_name}, you might need a plugin to preview markdown. "
                 "Try ':set ft=markdown' to at least get syntax highlighting."
             )
-        elif editor == "code":
-            subprocess.run(
-                [
-                    editor,
-                    "--goto",
-                    code_file_path,
-                    "-r",
-                    "--goto",
-                    f"{markdown_file}:1",
-                ]
-            )
-            subprocess.run([editor, "--command", "markdown.showPreview"])
+        elif editor == "code" or editor == "code-insiders":
+            subprocess.run([editor, "--goto", code_file_path])
+            subprocess.run([editor, markdown_file])
+            try:
+                subprocess.run(
+                    [editor, "--command", "markdown.showPreview"],
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:
+                pass
         elif editor == "nano":
             typer.echo(
                 "Note: Nano doesn't support split view or markdown preview. Opening code file only."

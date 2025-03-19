@@ -111,10 +111,22 @@ class SolutionUI:
         author_name = self._truncate_text(author_name, 15)
         return author_name
 
-    def _open_solution_url(self, slug):
+    def _open_solution_url(self, solution_node):
         """Open solution URL in browser"""
-        if slug:
-            url = f"{self.LEETCODE_BASE_URL}{slug}"
+        slug_parts = solution_node.get("slug", "").split("-")
+        problem_slug = slug_parts[0] if len(slug_parts) > 0 else ""
+
+        if len(slug_parts) > 1 and slug_parts[1] == "sum":
+            problem_slug = f"{slug_parts[0]}-{slug_parts[1]}"
+
+        solution_id = solution_node.get("topicId", "")
+        title_slug = solution_node.get("slug", "")
+
+        if problem_slug and solution_id and title_slug:
+            url = f"{self.LEETCODE_BASE_URL}{problem_slug}/solutions/{solution_id}/{title_slug}/"
+            webbrowser.open(url)
+        elif problem_slug:
+            url = f"{self.LEETCODE_BASE_URL}{problem_slug}/"
             webbrowser.open(url)
 
     def show_solution(self):
@@ -139,13 +151,23 @@ class SolutionUI:
 
         for i, solution in enumerate(self.solutions, 1):
             node = solution.get("node", {})
-            slug = node.get("slug", "")
+
+            slug_parts = node.get("slug", "").split("-")
+            problem_slug = slug_parts[0] if len(slug_parts) > 0 else ""
+
+            if len(slug_parts) > 1 and slug_parts[1] == "sum":
+                problem_slug = f"{problem_slug}-{slug_parts[1]}"
+
+            solution_id = node.get("topicId", "")
+            title_slug = node.get("slug", "")
 
             title_text = node.get("title", "Untitled")
             truncated_title = self._truncate_text(
                 title_text, self.COLUMN_WIDTHS["Title"] - 3
             )
-            title = f"[link={self.LEETCODE_BASE_URL}{slug}][{self.STYLES['title']}]{escape(truncated_title)}[/{self.STYLES['title']}][/link]"
+
+            solution_url = f"{self.LEETCODE_BASE_URL}{problem_slug}/solutions/{solution_id}/{title_slug}/"
+            title = f"[link={solution_url}][{self.STYLES['title']}]{escape(truncated_title)}[/{self.STYLES['title']}][/link]"
 
             author_name = self._format_author(node.get("author", {}))
             author = f"[{self.STYLES['author']}]{author_name}[/{self.STYLES['author']}]"
@@ -170,8 +192,8 @@ class SolutionUI:
         """Handle selection of a solution by index (1-based)"""
         if 1 <= index <= len(self.solutions):
             solution = self.solutions[index - 1]
-            slug = solution.get("node", {}).get("slug", "")
-            if slug:
-                self._open_solution_url(slug)
+            node = solution.get("node", {})
+            if node:
+                self._open_solution_url(node)
                 return True
         return False

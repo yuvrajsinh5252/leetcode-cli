@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="leetcli",
-    version="0.0.1",
+    version="0.0.2",
     author="Yuvrajsinh5252",
     author_email="yuvrajsinh476@gmail.com",
     description="A sleek command-line tool for LeetCode platform",

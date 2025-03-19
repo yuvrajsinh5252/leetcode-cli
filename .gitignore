@@ -6,3 +6,5 @@ leetcli.egg-info
 *.cpp
 *.mkv
 dist
+.env
+*.gif

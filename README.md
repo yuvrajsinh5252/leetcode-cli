@@ -11,7 +11,7 @@ A sleek command-line tool for LeetCode - solve, test, and submit problems direct
 #### 1. Using pip
 
 ```bash
-pip install leetcode-cli
+pip install leetcli
 ```
 
 #### 2. clone the repository

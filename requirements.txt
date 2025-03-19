@@ -4,3 +4,4 @@ gql[all]
 bs4
 setuptools
 markdownify
+twine

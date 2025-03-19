@@ -26,7 +26,7 @@ class SolutionUI:
         "author": "yellow",
         "date": "cyan",
         "stats": "blue",
-        "tags": "white on blue",
+        "tags": "cyan",
         "table_border": "blue",
     }
 
@@ -100,7 +100,7 @@ class SolutionUI:
                     tag_display = self._truncate_text(tag_name, 10)
 
                 formatted_tags.append(
-                    f"[{self.STYLES['tags']}]{escape(tag_display)}[/{self.STYLES['tags']}]"
+                    f"[{self.STYLES['tags']}]#{escape(tag_display)}[/{self.STYLES['tags']}]"
                 )
 
         return " ".join(formatted_tags)

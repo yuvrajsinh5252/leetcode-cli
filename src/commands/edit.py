@@ -92,15 +92,20 @@ def edit(
                 "Try ':set ft=markdown' to at least get syntax highlighting."
             )
         elif editor == "code" or editor == "code-insiders":
-            subprocess.run([editor, "--goto", code_file_path])
-            subprocess.run([editor, markdown_file])
             try:
                 subprocess.run(
-                    [editor, "--command", "markdown.showPreview"],
+                    [
+                        editor,
+                        "--goto",
+                        code_file_path,
+                        markdown_file,
+                        "--command",
+                        "markdown.showPreviewToSide",
+                    ],
                     stderr=subprocess.DEVNULL,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                typer.echo(f"Failed to open VS Code with markdown preview: {str(e)}")
         elif editor == "nano":
             typer.echo(
                 "Note: Nano doesn't support split view or markdown preview. Opening code file only."

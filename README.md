@@ -2,7 +2,9 @@
 
 A sleek command-line tool for LeetCode - solve, test, and submit problems directly from your terminal.
 
-https://github.com/user-attachments/assets/ff2eb1ce-734e-4e7a-b09c-61d6c491854e
+![image](https://s6.gifyu.com/images/bzHeo.gif)
+
+<!-- https://github.com/user-attachments/assets/ff2eb1ce-734e-4e7a-b09c-61d6c491854e -->
 
 ### 🚀 Quick Start
 
